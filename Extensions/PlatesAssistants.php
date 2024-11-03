@@ -324,11 +324,30 @@ class PlatesAssistants implements ExtensionInterface
 
     /**
      * Stores the conditional tag from tagIf for later return by ifTag()
-     * @var null
+     *
+     * @var null|string
      */
-    public $ifTag = null;
+    public string|null $ifTag = null;
 
-    public function tagIf(mixed $conditional, string $tagTrue, string $tagFalse): string
+    /**
+     * Conditional tag name rendering
+     * Usage:
+     *
+     * ```php
+     * <<?=$this->tagIf($truthy, 'h1', 'h2')?> class="something-or-other">
+     *     May be an <h1> or <h2> tag depending on truthiness of first argument
+     * </$this->ifTag()>
+     *
+     * ```
+     *
+     * @see PlatesAssistants::ifTag()
+     *
+     * @param  mixed  $conditional Value to checked for truthiness
+     * @param  string $tagTrue     Tag if true
+     * @param  string $tagFalse    Tag if false
+     * @return ?string
+     */
+    public function tagIf(mixed $conditional, string $tagTrue, string $tagFalse): ?string
     {
         if ($conditional) {
             $this->ifTag = $tagTrue;
@@ -341,6 +360,10 @@ class PlatesAssistants implements ExtensionInterface
         return $tagFalse;
     }
 
+    /**
+     * Closing conditional tach
+     * @return string|null
+     */
     public function ifTag(): ?string
     {
         return $this->ifTag;
@@ -349,8 +372,8 @@ class PlatesAssistants implements ExtensionInterface
     /**
      * Returns values depending on conditional truthiness
      * @param  mixed      $conditional Value checked
-     * @param  mixed|null $valueTrue   Value returned if conditional true
-     * @param  mixed|null $valueFalse  Value returned if conditional false optional
+     * @param  mixed|null $valueTrue   Value returned if conditional is truthy
+     * @param  mixed|null $valueFalse  Value returned if conditional is falsey, optional
      * @return mixed                   Value determined by $conditional truthiness
      */
     public function if(mixed $conditional, mixed $valueTrue = null, mixed $valueFalse = null): mixed
