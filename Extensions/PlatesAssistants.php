@@ -10,11 +10,9 @@ declare(strict_types=1);
 
 namespace Plates\Extensions;
 
-use Closure;
-use InvalidArgumentException;
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
-use ProcessWire\WireArray;
+use ProcessWire\{WireArray, WireHttp, WireRandom, WireTextTools};
 
 class PlatesAssistants implements ExtensionInterface
 {
@@ -38,6 +36,62 @@ class PlatesAssistants implements ExtensionInterface
         $engine->registerFunction('first', [$this, 'first']);
         $engine->registerFunction('last', [$this, 'last']);
         $engine->registerFunction('group', [$this, 'group']);
+        $engine->registerFunction('slice', [$this, 'slice']);
+        $engine->registerFunction('length', [$this, 'length']);
+        $engine->registerFunction('wireRandom', [$this, 'wireRandom']);
+        $engine->registerFunction('wireArray', [$this, 'wireArray']);
+        $engine->registerFunction('wireHttp', [$this, 'wireHttp']);
+        $engine->registerFunction('wireTextTools', [$this, 'wireTextTools']);
+    }
+
+    /**
+     * Wire
+     */
+
+    /**
+     * Assistant for instantiating a WireRandom object
+     * @return WireRandom
+     */
+    public function wireRandom(): WireRandom
+    {
+        return new WireRandom();
+    }
+
+    /**
+     * Assistant for creating a WireArray object
+     * @return WireArray
+     */
+    public function wireArray(mixed ...$values): WireArray
+    {
+        $wireArray = new WireArray();
+
+        if (!count($values)) {
+            return $wireArray;
+        }
+
+        if (count($values) > 1) {
+            return $wireArray->import($values);
+        }
+
+        return $wireArray->import($values);
+    }
+
+    /**
+     * Assistant for instantiating an instance of WireHttp
+     * @return WireHttp
+     */
+    public function wireHttp(): WireHttp
+    {
+        return new WireHttp();
+    }
+
+    /**
+     * Assistant for instantiating an instance of WireTextTools
+     * @return WireTextTools
+     */
+    public function wireTextTools(): WireTextTools
+    {
+        return new WireTextTools();
     }
 
     /**
@@ -61,30 +115,15 @@ class PlatesAssistants implements ExtensionInterface
     }
 
     /**
-     * Checks if variable is divisible by a number
+     * Checks if variable is divisible by a number, if strings are passed, casts to int
      * @param  int  $value Number to check divisibility of
      * @param  int  $by    Number to check if divisible by
-     * @param  bool $cast  Whether to cast the value passed to an integer if a string is passed
      * @return bool
-     * @throws InvalidArgumentException
      */
     public function divisibleBy(
         int|float|string $value,
         int|float|string $by,
-        bool $cast = false
     ): bool {
-        if (is_string($value) && !$cast) {
-            throw new InvalidArgumentException(
-                "divisibleBy expects an integer or float value argument if \$cast is not set to true, {$value} passed"
-            );
-        }
-
-        if (is_string($by) && !$cast) {
-            throw new InvalidArgumentException(
-                "divisibleBy expects an integer or float by argument if \$cast is not set to true, {$by} passed"
-            );
-        }
-
         is_string($value) && $value = (int) $value;
         is_string($by) && $by = (int) $by;
 
@@ -112,8 +151,25 @@ class PlatesAssistants implements ExtensionInterface
     }
 
     /**
-     * Arrays
+     * Arrays/Strings
+     *
+     * Assistants that work with either arrays or arrays and strings
      */
+
+    /**
+     * Gets the length of an array or string, nullsafe. Null returns 0
+     * - Batchable
+     * @param  null   $value Value to get length of
+     * @return int
+     */
+    public function length(string|array|null $value): int
+    {
+        return match (true) {
+            is_null($value) => 0,
+            is_string($value) => strlen($value),
+            default => count($value),
+        };
+    }
 
     /**
      * Returns a random value from an array or character delimited string, null safe
@@ -126,7 +182,7 @@ class PlatesAssistants implements ExtensionInterface
     public function rand(
         null|string|array|WireArray $values = [],
         bool $trim = true,
-        string $delimeter = ',',
+        string $delimeter = '',
         mixed $default = null,
     ): mixed {
         if (is_null($values)) {
@@ -135,7 +191,10 @@ class PlatesAssistants implements ExtensionInterface
 
         is_a($values, WireArray::class, true) && $values = $values->getArray();
 
-        is_string($values) && $values = explode($delimeter, $values);
+        if (is_string($values)) {
+            $delimeter && $values = explode($delimeter, $values);
+            !$delimeter && $values = str_split($values);
+        }
 
         if ($trim) {
             $values = array_map(fn ($value) => is_string($value) ? trim($value) : $value, $values);
@@ -146,60 +205,46 @@ class PlatesAssistants implements ExtensionInterface
 
     /**
      * Returns the first value from an array or character delimited string, null safe
+     * - Batchable
      * @param  string|array|WireArray  $values    Source to choose a random value from
      * @param  bool|boolean            $trim      Should trim values if string
      * @param  string                  $delimeter If $values is a string, value to split by
      * @param  mixed                   $default   Value to return if array is empty
      * @return mixed
      */
-    public function first(
-        null|string|array|WireArray $values = [],
-        bool $trim = true,
-        string $delimeter = ',',
-        mixed $default = null,
-    ): mixed {
+    public function first(null|string|array|WireArray $values = []): mixed
+    {
         if (is_null($values)) {
-            return $default;
+            return null;
         }
 
         is_a($values, WireArray::class, true) && $values = $values->getArray();
 
-        is_string($values) && $values = explode($delimeter, $values);
+        is_string($values) && $values = str_split($values);
 
-        if ($trim) {
-            $values = array_map(fn ($value) => is_string($value) ? trim($value) : $value, $values);
-        }
-
-        return count($values) ? $values[0] : $default;
+        return count($values) ? $values[0] : null;
     }
 
     /**
      * Returns the last value from an array or character delimited string, null safe
+     * - Batchable
      * @param  string|array|WireArray  $values    Source to choose a random value from
      * @param  bool|boolean            $trim      Should trim values if string
      * @param  string                  $delimeter If $values is a string, value to split by
      * @param  mixed                   $default   Value to return if array is empty
      * @return mixed
      */
-    public function last(
-        null|string|array|WireArray $values = [],
-        bool $trim = true,
-        string $delimeter = ',',
-        mixed $default = null,
-    ): mixed {
+    public function last(null|string|array|WireArray $values = []): mixed
+    {
         if (is_null($values)) {
-            return $default;
+            return null;
         }
 
         is_a($values, WireArray::class, true) && $values = $values->getArray();
 
-        is_string($values) && $values = explode($delimeter, $values);
+        is_string($values) && $values = str_split($values);
 
-        if ($trim) {
-            $values = array_map(fn ($value) => is_string($value) ? trim($value) : $value, $values);
-        }
-
-        return count($values) ? end($values) : $default;
+        return count($values) ? end($values) : null;
     }
 
     /**
@@ -232,11 +277,21 @@ class PlatesAssistants implements ExtensionInterface
      * @param  string|int      $by     Key or property to group by
      * @return array
      */
-    public function slice(array|WireArray $values, int $start, ?int $length = null): array
+    public function slice(array|WireArray $values, int $start, ?int $length = null): array|WireArray
     {
-        is_a($values, WireArray::class, true) && $values = $values->getArray();
+        $sliceable = $values;
+        $isWireArray = is_a($sliceable, WireArray::class, true);
 
-        return array_slice($values, $start, $length);
+        $isWireArray && $sliceable = $values->getArray();
+
+        $result = array_slice($values, $start, $length);
+
+        if ($isWireArray) {
+            $wireArray = new WireArray();
+            $result = $wireArray->import($result);
+        }
+
+        return $result;
     }
 
     /**
