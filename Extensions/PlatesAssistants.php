@@ -3,7 +3,26 @@
 /**
  * Helpful assistant methods made available to files handled by Plates
  *
- * Call using $this->{method}()
+ * Call using the following in Plates template files:
+ *
+ * ```php
+ * <?=$this->methodName($args)?>
+ * ```
+ * - or -
+ *
+ * ```php
+ * <?php if ($this->length('Firewire') > 5): ?>
+ *   <h1>Hello, you have a long name.</h1>
+ * <?php endif ?>
+ * ```
+ *
+ * Methods that accept one argument may be batched alongside PHP function names:
+ *
+ * <?=$this->batch('Firwire', 'strtoupper|str_reverse|last')?> // Echoes 'E' to the page
+ *
+ * Methods that work with arrays also work with WireArray and WireArray derived classes such as
+ * PageArrays
+ *
  */
 
 declare(strict_types=1);
@@ -16,6 +35,10 @@ use ProcessWire\{WireArray, WireHttp, WireRandom, WireTextTools};
 
 class PlatesAssistants implements ExtensionInterface
 {
+    private ?WireRandom $wireRandom = null;
+
+    private ?WireTextTools $wireTextTools = null;
+
     /**
      * {@inheritdoc}
      */
@@ -54,7 +77,11 @@ class PlatesAssistants implements ExtensionInterface
      */
     public function wireRandom(): WireRandom
     {
-        return new WireRandom();
+        if ($this->wireRandom) {
+            return $this->wireRandom;
+        }
+
+        return $this->wireRandom =  new WireRandom();
     }
 
     /**
@@ -91,8 +118,14 @@ class PlatesAssistants implements ExtensionInterface
      */
     public function wireTextTools(): WireTextTools
     {
-        return new WireTextTools();
+        if ($this->wireTextTools) {
+            return $this->wireTextTools;
+        }
+
+        return $this->wireTextTools = new WireTextTools();
     }
+
+    // public function renderIf(mixed $)
 
     /**
      * Numbers
@@ -120,10 +153,8 @@ class PlatesAssistants implements ExtensionInterface
      * @param  int  $by    Number to check if divisible by
      * @return bool
      */
-    public function divisibleBy(
-        int|float|string $value,
-        int|float|string $by,
-    ): bool {
+    public function divisibleBy(int|float|string $value, int|float|string $by): bool
+    {
         is_string($value) && $value = (int) $value;
         is_string($by) && $by = (int) $by;
 
@@ -162,11 +193,12 @@ class PlatesAssistants implements ExtensionInterface
      * @param  null   $value Value to get length of
      * @return int
      */
-    public function length(string|array|null $value): int
+    public function length(string|array|WireArray|null $value): int
     {
         return match (true) {
             is_null($value) => 0,
             is_string($value) => strlen($value),
+            is_a($value, WireArray::class, true) => $value->count(),
             default => count($value),
         };
     }

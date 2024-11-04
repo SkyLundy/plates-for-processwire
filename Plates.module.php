@@ -7,7 +7,7 @@ namespace ProcessWire;
 use League\Plates\Engine;
 use Plates\Extensions\PlatesAssistants;
 
-final class Plates extends WireData implements Module, ConfigurableModule
+class Plates extends WireData implements Module, ConfigurableModule
 {
 
     public Engine $engine;
@@ -18,7 +18,7 @@ final class Plates extends WireData implements Module, ConfigurableModule
     public static function getModuleInfo()
     {
         return [
-            'title' => __('Plates Templating', __FILE__),
+            'title' => __('Plates for ProcessWire', __FILE__),
             'summary' => __('Provides template rendering via Plates by The League of Extraordinary Packages.', __FILE__),
             'author' => 'Firewire',
             'href' => '',
@@ -41,7 +41,7 @@ final class Plates extends WireData implements Module, ConfigurableModule
     {
         $this->wire('classLoader')->addNamespace('Plates\Extensions', __DIR__ . '/Extensions');
 
-        $this->engine = $this->initializePlates();
+        $this->engine = $this->initialize();
     }
 
     /**
@@ -64,7 +64,7 @@ final class Plates extends WireData implements Module, ConfigurableModule
      *                                         direcory preferred.
      * @return Engine
      */
-    public function ___initializePlates(?string $templatesDir = null): Engine
+    public function ___initialize(?string $templatesDir = null): Engine
     {
         $templatesDir =  rtrim($templatesDir ?? $this->wire('config')->paths->templates, '/');
 
@@ -95,8 +95,19 @@ final class Plates extends WireData implements Module, ConfigurableModule
         $inputfields->add([
           'type' => 'checkbox',
           'name' => 'add_assistants',
-          'label' => 'Add additional assistant methods to Plates for use in template files',
+          'label' => 'Add additional assistant methods to Plates for use in template files?',
+          'label2' => 'Add assistant methods',
           'checked' => $this->add_assistants ? 'checked' : '',
+        ]);
+
+        $inputfields->add([
+          'type' => 'markup',
+          'name' => 'assistant_examples',
+          'label' => 'Assistant Functions',
+          'value' => <<<EOT
+            <p>Plates for ProcessWire can provide additional assistant functions to make working with data in your Plates template files easier and more efficient should you choose to include them. When rendering files using plates, in addition to having all ProcessWire objects available, additional functions are also made available.</p>
+            <p>For more information about assistant function that can be included when Plates is loaded, refer to <code>/site/modules/Plates/Extensions/PlatesAssistance.php</code></p>
+           EOT,
         ]);
 
         return $inputfields;
