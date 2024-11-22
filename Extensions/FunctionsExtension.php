@@ -31,101 +31,49 @@ namespace Plates\Extensions;
 
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
-use ProcessWire\{WireArray, WireHttp, WireRandom, WireTextTools};
+use ProcessWire\WireArray;
 
-class PlatesAssistants implements ExtensionInterface
+class FunctionsExtension implements ExtensionInterface
 {
-    private ?WireRandom $wireRandom = null;
+    public $engine;
 
-    private ?WireTextTools $wireTextTools = null;
+    public $template;
 
     /**
      * {@inheritdoc}
      */
     public function register(Engine $engine)
     {
-        $engine->registerFunction('or', [$this, 'or']);
-        $engine->registerFunction('if', [$this, 'if']);
-        $engine->registerFunction('attrIf', [$this, 'attrIf']);
-        $engine->registerFunction('classIf', [$this, 'classIf']);
-        $engine->registerFunction('tagIf', [$this, 'tagIf']);
-        $engine->registerFunction('ifTag', [$this, 'ifTag']);
-        $engine->registerFunction('url', [$this, 'url']);
+        $this->engine = $engine;
+
         $engine->registerFunction('clamp', [$this, 'clamp']);
         $engine->registerFunction('divisibleBy', [$this, 'divisibleBy']);
         $engine->registerFunction('even', [$this, 'even']);
-        $engine->registerFunction('odd', [$this, 'odd']);
-        $engine->registerFunction('rand', [$this, 'rand']);
         $engine->registerFunction('first', [$this, 'first']);
-        $engine->registerFunction('last', [$this, 'last']);
         $engine->registerFunction('group', [$this, 'group']);
-        $engine->registerFunction('slice', [$this, 'slice']);
+        $engine->registerFunction('last', [$this, 'last']);
         $engine->registerFunction('length', [$this, 'length']);
-        $engine->registerFunction('wireRandom', [$this, 'wireRandom']);
-        $engine->registerFunction('wireArray', [$this, 'wireArray']);
-        $engine->registerFunction('wireHttp', [$this, 'wireHttp']);
-        $engine->registerFunction('wireTextTools', [$this, 'wireTextTools']);
+        $engine->registerFunction('odd', [$this, 'odd']);
+        $engine->registerFunction('random', [$this, 'random']);
+        $engine->registerFunction('randFrom', [$this, 'randFrom']);
+        $engine->registerFunction('slice', [$this, 'slice']);
+        $engine->registerFunction('url', [$this, 'url']);
     }
 
     /**
-     * Wire
+     * Booleans
      */
 
     /**
-     * Assistant for instantiating a WireRandom object
-     * @return WireRandom
+     * Returns a 0 or 1 depending on whether the value is truthy or falsey
+     * - Batchable
+     * @param  mixed  $value A value that evaluates to true or false
+     * @return int 0 or 1
      */
-    public function wireRandom(): WireRandom
+    public function bit(bool|string|int $value): int
     {
-        if ($this->wireRandom) {
-            return $this->wireRandom;
-        }
-
-        return $this->wireRandom =  new WireRandom();
+        return !!$value ? 1 : 0;
     }
-
-    /**
-     * Assistant for creating a WireArray object
-     * @return WireArray
-     */
-    public function wireArray(mixed ...$values): WireArray
-    {
-        $wireArray = new WireArray();
-
-        if (!count($values)) {
-            return $wireArray;
-        }
-
-        if (count($values) > 1) {
-            return $wireArray->import($values);
-        }
-
-        return $wireArray->import($values);
-    }
-
-    /**
-     * Assistant for instantiating an instance of WireHttp
-     * @return WireHttp
-     */
-    public function wireHttp(): WireHttp
-    {
-        return new WireHttp();
-    }
-
-    /**
-     * Assistant for instantiating an instance of WireTextTools
-     * @return WireTextTools
-     */
-    public function wireTextTools(): WireTextTools
-    {
-        if ($this->wireTextTools) {
-            return $this->wireTextTools;
-        }
-
-        return $this->wireTextTools = new WireTextTools();
-    }
-
-    // public function renderIf(mixed $)
 
     /**
      * Numbers
@@ -138,8 +86,11 @@ class PlatesAssistants implements ExtensionInterface
      * @param  float     $max   Maximum value
      * @return int|float
      */
-    public function clamp(int|float $value, int|float $min, int|float $max): int|float
-    {
+    public function clamp(
+        int|float|null $value,
+        int|float|null $min,
+        int|float|null $max
+    ): int|float|null {
         return match (true) {
             $value > $max => $max,
             $value < $min => $min,
@@ -182,7 +133,7 @@ class PlatesAssistants implements ExtensionInterface
     }
 
     /**
-     * Arrays/Strings
+     * Arrays/WireArrays/Strings
      *
      * Assistants that work with either arrays or arrays and strings
      */
@@ -204,14 +155,37 @@ class PlatesAssistants implements ExtensionInterface
     }
 
     /**
+     * Returns a random item from an array or a random character if a string is passed. Returns null
+     * if value is null or empty. Null safe
+     * - Batchable
+     *
+     * @param  WireArray|string|array|null   $value A string or arrayable item to source the random value
+     * @return mixed
+     */
+    public function random(WireArray|string|array|null $value): mixed
+    {
+        if (is_null($value)) {
+            return null;
+        }
+
+        is_a($value, WireArray::class, true) && $value = $value->getArray();
+
+        is_string($value) && $values = str_split($value);
+
+        return count($values) ? $values[array_rand($values)] : null;
+    }
+
+    /**
+     * Complex random function that accepts an optional delimeter if
      * Returns a random value from an array or character delimited string, null safe
+     *
      * @param  string|array|WireArray  $values    Source to choose a random value from
      * @param  bool|boolean            $trim      Should trim values if string
      * @param  string                  $delimeter If $values is a string, value to split by
      * @param  mixed                   $default   Value to return if array is empty
      * @return mixed
      */
-    public function rand(
+    public function randFrom(
         null|string|array|WireArray $values = [],
         bool $trim = true,
         string $delimeter = '',
@@ -224,7 +198,10 @@ class PlatesAssistants implements ExtensionInterface
         is_a($values, WireArray::class, true) && $values = $values->getArray();
 
         if (is_string($values)) {
+            $values = trim($values);
+
             $delimeter && $values = explode($delimeter, $values);
+
             !$delimeter && $values = str_split($values);
         }
 
@@ -337,128 +314,6 @@ class PlatesAssistants implements ExtensionInterface
         }
 
         return "{$urlOrQuery}?" . http_build_query($query);
-    }
-
-    /**
-     * Conditional Values
-     */
-
-    /**
-     * Returns the first value if truthy, second if falsey
-     * @param  mixed      $valueTrue  Value checked and returned if true
-     * @param  mixed|null $valueFalse Value returned if first value is false, optional
-     * @return mixed                  Value depending on truthiness of first argument
-     */
-    public function or(mixed $valueTrue, mixed $valueFalse = null): mixed
-    {
-        return $valueTrue ?: $valueFalse;
-    }
-
-    /**
-     * Stores the conditional tag from tagIf for later return by ifTag()
-     *
-     * @var null|string
-     */
-    public string|null $ifTag = null;
-
-    /**
-     * Conditional tag name rendering
-     * Usage:
-     *
-     * ```php
-     * <<?=$this->tagIf($truthy, 'h1', 'h2')?> class="something-or-other">
-     *     May be an <h1> or <h2> tag depending on truthiness of first argument
-     * </$this->ifTag()>
-     *
-     * ```
-     *
-     * @see PlatesAssistants::ifTag()
-     *
-     * @param  mixed  $conditional Value to checked for truthiness
-     * @param  string $tagTrue     Tag if true
-     * @param  string $tagFalse    Tag if false
-     * @return ?string
-     */
-    public function tagIf(mixed $conditional, string $tagTrue, string $tagFalse): ?string
-    {
-        if ($conditional) {
-            $this->ifTag = $tagTrue;
-
-            return $tagTrue;
-        }
-
-        $this->ifTag = $tagFalse;
-
-        return $tagFalse;
-    }
-
-    /**
-     * Closing conditional tach
-     * @return string|null
-     */
-    public function ifTag(): ?string
-    {
-        return $this->ifTag;
-    }
-
-    /**
-     * Returns values depending on conditional truthiness
-     * @param  mixed      $conditional Value checked
-     * @param  mixed|null $valueTrue   Value returned if conditional is truthy
-     * @param  mixed|null $valueFalse  Value returned if conditional is falsey, optional
-     * @return mixed                   Value determined by $conditional truthiness
-     */
-    public function if(mixed $conditional, mixed $valueTrue = null, mixed $valueFalse = null): mixed
-    {
-        return $conditional ? $valueTrue : $valueFalse;
-    }
-
-    /**
-     * Method to write shorter-handed conditional attributes
-     * @param  mixed      $conditional Value checked
-     * @param  string     $attr        Attriute to output
-     * @param  string|int $valueTrue   Value returned if conditional true, optional
-     * @param  string|int $valueFalse  Value returned if conditional false optional
-     * @return string                  Attribute with value determined by $conditional
-     */
-    public function attrIf(
-        mixed $conditional,
-        string $attr,
-        mixed $valueTrue = null,
-        mixed $valueFalse = null,
-    ): mixed {
-        if (!$conditional && !$valueFalse) {
-            return null;
-        }
-
-        if ($conditional && !$valueTrue && !$valueFalse) {
-            return $attr;
-        }
-
-        if (!!$conditional && !$valueFalse) {
-            return "{$attr}=\"{$valueTrue}\"";
-        }
-
-        $value = $conditional ? $valueTrue : $valueFalse;
-
-        if ($value) {
-            return "{$attr}=\"{$value}\"";
-        }
-    }
-
-    /**
-     * Shorthand alias for attrIf that outputs class attribute with values
-     * @param  mixed      $conditional Value checked
-     * @param  string|int $valueTrue   Value returned if conditional true, optional
-     * @param  string|int $valueFalse  Value returned if conditional false optional
-     * @return string                  Attribute with value determined by $conditional
-     */
-    public function classIf(
-        mixed $conditional,
-        mixed $valueTrue = null,
-        mixed $valueFalse = null,
-    ): mixed {
-        return $this->attrIf($conditional, 'class', $valueTrue, $valueFalse);
     }
 
 }

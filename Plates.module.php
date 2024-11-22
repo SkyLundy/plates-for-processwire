@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace ProcessWire;
 
 use League\Plates\Engine;
-use Plates\Extensions\PlatesAssistants;
+use League\Plates\Template\Template;
+use Plates\Extensions\{EmbedExtension, FunctionsExtension, WireExtension};
 
 class Plates extends WireData implements Module, ConfigurableModule
 {
 
-    public Engine $engine;
+    public readonly Engine $engine;
 
     /**
      * {@inheritdoc}
@@ -39,6 +40,8 @@ class Plates extends WireData implements Module, ConfigurableModule
      */
     public function init()
     {
+        $this->wire->set('plates', $this);
+
         $this->wire('classLoader')->addNamespace('Plates\Extensions', __DIR__ . '/Extensions');
 
         $this->engine = $this->initialize();
@@ -51,11 +54,10 @@ class Plates extends WireData implements Module, ConfigurableModule
     {
         $this->registerProcessWireObjects($this->engine);
 
-        if ($this->add_assistants) {
-            $this->engine->loadExtension(new PlatesAssistants());
-        }
-
-        $this->wire->set('plates', $this->engine);
+        // Load extensions if configured in module
+        $this->add_functions_extension && $this->engine->loadExtension(new FunctionsExtension());
+        $this->add_embed_extension && $this->engine->loadExtension(new EmbedExtension());
+        $this->add_wire_extension && $this->engine->loadExtension(new WireExtension());
     }
 
     /**
@@ -72,17 +74,25 @@ class Plates extends WireData implements Module, ConfigurableModule
     }
 
     /**
+     * Loads the specified Template object to the $plate variable when needed outside of the current
+     * template file scope
+     * @param  Template|null $platesTemplate The template to assign to $plate
+     * @return void
+     */
+    public function global(?Template $platesTemplate = null): void
+    {
+        $this->wire->set('plate', $platesTemplate);
+    }
+
+    /**
      * Injects all ProcessWire object variables for use in Plates files at runtime
      * @param  Engine $engine Plates Engine object
-     * @return Engine
      */
-    private function registerProcessWireObjects(Engine $engine): Engine
+    private function registerProcessWireObjects(Engine $engine): void
     {
         foreach ($this->wire('all')->getArray() as $name => $object) {
             $engine->addData([$name => $object]);
         }
-
-        return $engine;
     }
 
     /**
@@ -92,23 +102,57 @@ class Plates extends WireData implements Module, ConfigurableModule
      */
     public function getModuleConfigInputfields(InputfieldWrapper $inputfields): InputfieldWrapper
     {
-        $inputfields->add([
+        $modules = $this->wire('modules');
+
+        $fieldset = $modules->InputfieldFieldset;
+        $fieldset->label = 'Plates for ProcessWire Extensions';
+        $fieldset->description = 'Additional functions and features to enhance templates and workflows';
+        $fieldset->collapsed = Inputfield::collapsedNever;
+
+        $fieldset->add([
           'type' => 'checkbox',
-          'name' => 'add_assistants',
-          'label' => 'Add additional assistant methods to Plates for use in template files?',
-          'label2' => 'Add assistant methods',
-          'checked' => $this->add_assistants ? 'checked' : '',
+          'name' => 'add_functions_extension',
+          'label' => 'Add additional assistant methods to Plates?',
+          'label2' => 'Add functions extension',
+          'checked' => $this->add_functions_extension ? 'checked' : '',
+          'collapsed' => Inputfield::collapsedNever,
+          'themeBorder' => 'hide',
+          'columnWidth' => 100 / 3,
         ]);
 
-        $inputfields->add([
-          'type' => 'markup',
-          'name' => 'assistant_examples',
-          'label' => 'Assistant Functions',
-          'value' => <<<EOT
-            <p>Plates for ProcessWire can provide additional assistant functions to make working with data in your Plates template files easier and more efficient should you choose to include them. When rendering files using plates, in addition to having all ProcessWire objects available, additional functions are also made available.</p>
-            <p>For more information about assistant function that can be included when Plates is loaded, refer to <code>/site/modules/Plates/Extensions/PlatesAssistance.php</code></p>
-           EOT,
+        $fieldset->add([
+          'type' => 'checkbox',
+          'name' => 'add_embed_extension',
+          'label' => 'Add embed functionality to Plates?',
+          'label2' => 'Add embed extension',
+          'checked' => $this->add_embed_extension ? 'checked' : '',
+          'collapsed' => Inputfield::collapsedNever,
+          'themeBorder' => 'hide',
+          'columnWidth' => 100 / 3,
         ]);
+
+        $fieldset->add([
+          'type' => 'checkbox',
+          'name' => 'add_wire_extension',
+          'label' => 'Add Wire utility functions to Plates?',
+          'label2' => 'Add Wire extension',
+          'checked' => $this->add_embed_extension ? 'checked' : '',
+          'collapsed' => Inputfield::collapsedNever,
+          'themeBorder' => 'hide',
+          'columnWidth' => 100 / 3,
+        ]);
+
+        $inputfields->add($fieldset);
+
+        // $inputfields->add([
+        //   'type' => 'markup',
+        //   'name' => 'functions_extension_example',
+        //   'label' => 'Functions Extension',
+        //   'value' => <<<EOT
+        //     <p>Plates for ProcessWire can provide additional assistant functions to make working with data in your Plates template files easier and more efficient should you choose to include them. When rendering files using plates, in addition to having all ProcessWire objects available, additional functions are also made available.</p>
+        //     <p>For more information about assistant function that can be included when Plates is loaded, refer to <code>/site/modules/Plates/Extensions/FunctionsExtension.php</code></p>
+        //    EOT,
+        // ]);
 
         return $inputfields;
     }

@@ -138,7 +138,7 @@ $title ??= null;
 ```
 **NOTE** - Always include the `namespace ProcessWire` statement at the top of your Plates templates to access the ProcessWire API
 
-#### Add Contend And View Specific Markup
+#### Add Content And View Specific Markup
 
 Use the `layout` method to import the layout, the define content for section blocks. Any content that is added outside of a section block will be rendered under the Plates reserved `content` keyword section block
 
@@ -195,9 +195,17 @@ Rinse and repeat
 
 Plates For ProcessWire comes with predefined functions that are optionally loaded with Plates. If you would like these added, ensure that the checkbox is set on the module config page.
 
+I created these functions to add some extra utility while using Plates with ProcessWire, and to replicate some of the behavior that is present in other templating systems. You don't have to use them, that's why they're optional...
+
 To learn more about functions and data in Plates, refer to the [Plates documentation about using functions](https://platesphp.com/templates/functions/).
 
-I created these functions to add some extra utility while using Plates with ProcessWire, and to replicate some of the behavior that is present in other templating systems. You don't have to use them, that's why they're optional...
+Just like Plates' support for batching applying native PHP functions to values, any of the Assistant functions that accept one argument may also be chained. Example with two native PHP functions followed by the custom `first` Assistant function:
+
+```php
+$name = ' firewire ';
+
+<?=$this->batch($name, 'trim|strtoupper|first')?> // => outputs 'F'
+```
 
 To understand how you can add your own custom functions and features by implementing an Extension, refer to the module's code and the [Plates documentation on Extensions](https://platesphp.com/engine/extensions/).
 
@@ -205,39 +213,71 @@ To see full documentation and docblocks for the custom functions, refer to the `
 
 Here are the Assistant Functions that can be optionally enabled when you use Plates For ProcessWire and how to use them:
 
+### Boolean
+
+#### Bit
+Useful when true or false needs to be output in some way to the page where true and false boolean values can't be, or a value isn't a boolean. Very useful when used with Alpine JS.
+
+```html
+<div x-data="
+       showMap: <?=$this->bit($page->address)?>,
+       init() {
+         if (this.showMap) {
+            // Initialize a Google map...
+         }
+       }
+     "
+>
+    <div id="google-map"></div>
+</div>
+```
+
+
 ### Conditionals
 
-**Or**
+#### Or
 Outputs one value if truthy, or a second value if the first is falsey
 
 ```html
 <h2>Hello, <?=$this->or($person->name, 'would you like to sign up for an account?')?></h2>
+
+<!-- Native alternative -->
+
+<h2>Hello, <?=$person->name ?: 'would you like to sign up for an account?'?></h2>
 ```
 
-**Conditional Tag**
-Outputs one of two tags depending on the truthiness of the first argument
+#### Inline If
+Similar to ternary statement, but may be used with only one argument or both.
 
 ```html
-<<?=$this->tagIf($page->headline, 'h2', 'h3'?> class="text-neutral-500">
-    Hello, <?=$this->or($person->name, 'would you like to sign up for an account?')?>
-</<?=$this->ifTag()?>>
-```
 
-**Inline If**
-Shorthand for an if/else statement. May be used with only one argument or both
+<!-- With one value -->
+<div class="text-red-500 hidden <?=$this->if($page->message_type == 'warning', '!block'?>">
+    <?=$page->message?>
+</div>
 
-```html
-<div class="font-bold text-neutral-500 <?=$this->if($page->message_type === 'warning', 'block', 'hidden'?>">
+<!-- With 2 values -->
+<div class="text-red-500 <?=$this->if($page->message_type == 'warning', 'block', 'hidden'?>">
     <?=$page->warning_message?>
 </div>
 
-<!-- Also used as -->
-<div class="font-bold text-neutral-500 hidden <?=$this->if($page->message_type === 'warning', '!block'?>">
+<!-- Alternative to a ternary which always requires two ternary values -->
+<div class="text-red-500 <?=$page->message_type == 'warning' ? '!block' : 'hidden'?>">
     <?=$page->message?>
 </div>
 ```
 
-**Conditional Attribute**
+#### Conditional Tag
+Outputs one of two tags depending on the truthiness of the first argument
+
+```html
+<<?=$this->tagIf($page->headline, 'h2', 'h3'?> class="text-neutral-500">
+    <?=$page->headline?>
+</<?=$this->ifTag()?>>
+```
+
+
+#### Conditional Attribute
 Outputs an attribute if conditional is truthy
 
 ```html
@@ -245,7 +285,7 @@ Outputs an attribute if conditional is truthy
     Submit Form
 </button>
 
-**Conditional Class Attribute**
+#### Conditional Class Attribute
 Shorthand for conditional attribute, but assumes class. Can be used with one or both values
 
 ```html
@@ -257,7 +297,7 @@ Shorthand for conditional attribute, but assumes class. Can be used with one or 
 
 ### Numbers
 
-**Clamp**
+#### Clamp
 Returns a number limited to and inclusive of the max and min values
 
 ```php
@@ -272,7 +312,7 @@ Returns a number limited to and inclusive of the max and min values
 <?php endif?>
 ```
 
-**Divisible By**
+#### Divisible By
 Returns whether a number can be divided by another
 
 ```php
@@ -286,7 +326,7 @@ Returns whether a number can be divided by another
 </ul>
 ```
 
-**Even**
+#### Even
 Returns whether a number is even or not
 
 ```html
@@ -297,7 +337,7 @@ Returns whether a number is even or not
 <?php endif?>
 ```
 
-**Odd**
+#### Odd
 Returns whether a number is odd or not
 
 ```html
@@ -310,7 +350,7 @@ Returns whether a number is odd or not
 
 ### Arrays/Strings
 
-**Length**
+#### Length
 Gets the length of an array, WireArray, or string
 
 ```html
@@ -324,7 +364,7 @@ Gets the length of an array, WireArray, or string
 <div>You have <?=$this->length($page->family_members)?> family members coming to dinner.</div>
 ```
 
-**Random**
+#### Random
 Returns a random item in an array, WireArray, or a random letter in a string
 
 ```html
@@ -338,7 +378,7 @@ Returns a random item in an array, WireArray, or a random letter in a string
 <div>You win: <?=$this->random($page->prizes)?>.</div>
 ```
 
-**First**
+#### First
 Returns the first item in an array, WireArray, or first letter of a string
 
 ```html
@@ -352,7 +392,7 @@ Returns the first item in an array, WireArray, or first letter of a string
 <div>The winner of the race is: <?=$this->first($page->race_results)?>.</div>
 ```
 
-**Last**
+#### Last
 Returns the last item in an array, WireArray, or last letter of a string
 
 ```html
@@ -366,7 +406,7 @@ Returns the last item in an array, WireArray, or last letter of a string
 <div>The last train leaves at: <?=$this->last('10:00', '12:30', '15:45')?>.</div>
 ```
 
-**Group**
+#### Group
 Groups an array of objects by property or array of arrays by key, also works with WireArray and
 WireArray derived objects. Returns an array keyed by specified property/key
 
@@ -383,7 +423,7 @@ WireArray derived objects. Returns an array keyed by specified property/key
 <div>Books by subject: <?=$this->group($page->books, 'subject')?>.</div>
 ```
 
-**Slice**
+#### Slice
 Slices an array, WireArray, or WireArray
 
 ```html
@@ -394,14 +434,30 @@ Slices an array, WireArray, or WireArray
 <div>Least favorite books: <?=$this->group($page->books, 3)?>.</div>
 ```
 
-**URL**
+#### URL
 Creates a query string or adds a query to a URL
 
 ```html
 <a href="<?=$this->slice($page->external_url, ['utm_source' => 'website', 'utm_campaign' => 'info'])?>">Find out more</div>
 ```
 
+### Wire Objects
 
+#### WireRandom
+Creates a WireRandom object and returns for use, memoizes
+
+```html
+<div>Here's a random string <?=$this->wireRandom()->alphanumeric()?></div>
+```
+
+#### WireArray
+Creates a new WireArray object and optionally populates if arguments passed
+
+```html
+<div>
+
+</div>
+```
 
 
 
