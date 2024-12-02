@@ -2,8 +2,6 @@
 
 /**
  * Adds conditional functions to Plates template files
- *
- * Use to conditionally render tags, attributes, or markup
  */
 
 declare(strict_types=1);
@@ -29,24 +27,11 @@ class ConditionalsExtension implements ExtensionInterface
         $engine->registerFunction('attrIf', [$this, 'attrIf']);
         $engine->registerFunction('attrsIf', [$this, 'attrsIf']);
         $engine->registerFunction('classIf', [$this, 'classIf']);
-        $engine->registerFunction('group', [$this, 'group']);
         $engine->registerFunction('if', [$this, 'if']);
         $engine->registerFunction('ifVal', [$this, 'ifVal']);
         $engine->registerFunction('ifTag', [$this, 'ifTag']);
-        $engine->registerFunction('or', [$this, 'or']);
         $engine->registerFunction('switch', [$this, 'switch']);
         $engine->registerFunction('tagIf', [$this, 'tagIf']);
-    }
-
-    /**
-     * Returns the first value if truthy, second if falsey
-     * @param  mixed      $valueTrue  Value checked and returned if true
-     * @param  mixed|null $valueFalse Value returned if first value is false, optional
-     * @return mixed                  Value depending on truthiness of first argument
-     */
-    public function or(mixed $valueTrue, mixed $valueFalse = null): mixed
-    {
-        return $valueTrue ?: $valueFalse;
     }
 
     /**
@@ -76,7 +61,7 @@ class ConditionalsExtension implements ExtensionInterface
      */
     public function tagIf(mixed $conditional, string $tagTrue, string $tagFalse): ?string
     {
-        if ($conditional) {
+        if (!!$conditional) {
             $this->ifTag = $tagTrue;
 
             return $tagTrue;
@@ -109,7 +94,7 @@ class ConditionalsExtension implements ExtensionInterface
     }
 
     /**
-     * Returns a value if truthy, simplified for use in batches
+     * Returns a value if truthy, null otherwise, simplified for use in batches
      * - Batchable
      * @param  mixed  $value Value to return if truthy
      * @return mixed
@@ -120,13 +105,13 @@ class ConditionalsExtension implements ExtensionInterface
     }
 
     /**
-     * Compares the value to an array of conditions keyed by possible value and value to output if
-     * true
+     * Compares the value to an array of conditions keyed by possible value and value to output
+     * where key matches
      *
      * $conditions = ['black' => 'text-black', 'white' => 'text-white'];
      *
      * @param  mixed  $value      Value to check against conditional options
-     * @param  array  $conditions [description]
+     * @param  array  $conditions Array of values to output
      * @return mixed
      */
     public function switch(mixed $value, array $conditions = []): mixed
@@ -208,8 +193,6 @@ class ConditionalsExtension implements ExtensionInterface
             $values = (array) $values;
 
             count($values) > 2 && $values = array_slice($values, 0, 2);
-
-
 
             return $values = $this->attrIf($conditional, $attributeName,...$values);
         });
