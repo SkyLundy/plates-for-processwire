@@ -148,133 +148,7 @@ As mentioned, the entire ProcessWire API is made available to all Plates files s
 <?=$plates->templates->render('views::home.view', ['yourVariable' => 'Hello'])?>
 ```
 
-### Layouts, Nesting, Sections, etc.
-
-Documentation reference: [Layouts](https://platesphp.com/templates/layouts/)
-Documentation reference: [Nesting](https://platesphp.com/templates/nesting/)
-Documentation reference: [Sections](https://platesphp.com/templates/sections/)
-
-As with all files handled by Plates, the entire ProcessWire API is available. The `$this` keyword references the current template object and provides access to the Plates API. Note that multilanguage support is also available.
-
-The `$page` variable will always reference the current page being rendered, regardless of file.
-
-**Layout**
-
-```php
-<?php // site/templates/layouts/main.php
-
-// A nullsafe assigment creates a default value if needed.
-$title ??= $page->title;
-$logo ??= null;
-?>
-<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?=$title?></title>
-    <link rel="stylesheet" href="<?=$wire->urls->assets?>bundle/styles/app.css">
-  </head>
-  <body>
-    <header>
-        <?php if ($logo): ?>
-    		<img src="<?=$logo->url?>" alt="<?=$logo->description?>">
-		<?php endif ?>
-    </header>
-    <secion class="page-hero">
-        <?=$this->section('page_hero')?>
-    </section>
-
-    <?=$this->section('content')?>
-
-    <footer>
-        <?=$this->section('page_footer')?>
-
-        <small><?=__('Copyright')?> &copy; <?=date('Y')?></small>
-    </footer>
-    <script src="<?$wire->urls->assets?>bundle/scripts/app.js"></script>
-  </body>
-</html>
-```
-
-**Nested Template**
-
-```php
-<?php // site/templates/components/image_gallery.php
-
-/**
- * @var Pageimages $images
- * @var string $imageCredits
- */
-?>
-<div class="image-gallery">
-    <div class="images">
-        <?php foreach ($images as $image): ?>
-            <img src="<?=$image->url?>" alt="<?=$image->description?>">
-        <?php endforeach ?>
-    </div>
-    <div class="image-credits">
-        Photos provided by <?=$imageCredits?>
-    </div>
-</div>
-```
-
-**Plates Template**
-
-Rendered in your ProcessWire template via `<?=$plates->templates->render('views::home.view')?>`
-
-Additional documentation reference: [Functions](https://platesphp.com/templates/functions/)
-
-```php
-<?php // site/templates/views/home.view.php
-	$this->layout('layouts::main', ['title' => $page->title]);
-?>
-<?php $this->start('page_hero')?>
-    <h1><?=$page->headline?></h1>
-    <h2><?=$page->headline2?></h2>
-<?php $this->stop()?>
-
-<!-- Anything not located within a named section is rendered in the Plates reserved keyword 'content' section in a layout -->
-<section>
-    <?=$this->e($page->dangerous_field)?>
-    <?=$page->body?>
-</section>
-
-<section>
-    <?=$this->batch($page->text, 'strtolower|ucfirst')?>
-</section>
-
-<section>
-    <ul>
-    <?php foreach ($page->library as $item):?>
-        <li>
-            <p><?=$item->book_name?></p>
-            <p><?=$item->author_name?></p>
-        </li>
-    <?php endforeach?>
-    </ul>
-</section>
-
-<!-- You may use ProcessWire's translation features as well -->
-<section>
-    <h2><?=__('Image Gallery')?></h2>
-    <?=$this->fetch('components::image_gallery', [
-        'images' => $page->images,
-        'imageCredits' => $page->image_credits,
-    ])?>
-</section>
-
-<?php $this->start('page_footer')?>
-  <form>
-      <label>
-        Sign up for our newsletter
-      	<input type="text">
-      </label>
-      <input type="submit">
-  </form>
-<?php $this->stop()?>
-
-```
+That's it. You're ready to use Plates in your ProcessWire projects
 
 ## Accessing the Plates Template object outside of a Plates template
 
@@ -283,44 +157,39 @@ In Plates template files, like `home.view.php` above, the file is rendered by th
 There may be rare occasions where you want to access the Template object outside of the current template. Plates For ProcessWire makes this easy.
 
 ```php
-<?php
-	// site/templates/views/home.view.php
+<?php // site/templates/views/home.view.php
 
-    // $this is now accessible outside of this Template file using the global $plate variable
+    // The $this objext is now accessible outside of this Template file as $plate
     $plates->exposeTemplate($this);
 
-	$this->layout('layouts::main', ['title' => $page->title]);
+	$this->layout('layouts::main');
 ?>
 <!-- Template markup and output below -->
 ```
 
 **Example**
 
-An example of where exposing the current template is useful is when using [RockPageBuilder](https://www.baumrock.com/en/processwire/modules/rockpagebuilder/). When rendering a RockPageBuilder field, accessing the parent Plates template is not possible by default. By calling the `$plates->exposeTemplate($this)` method in the template that is rendering the RockPageBuilder field, you can then use all of the methods available in your Plates template with the `$plate` variable. 
+An example of where exposing the current template is useful is when using [RockPageBuilder](https://www.baumrock.com/en/processwire/modules/rockpagebuilder/). When rendering a RockPageBuilder field, accessing the parent Plates template is not possible by default. By calling the `$plates->exposeTemplate($this)` method in the template rendering the RockPageBuilder field, you can then use all of the methods available in your Plates template with the `$plate` variable. 
 
 ```php
-<?php namespace ProcessWire;
-// site/templates/views/home.view.php
-
+<?php // site/templates/views/home.view.php
 $plates->exposeTemplate($this);
 ?>
-<!-- ...markup and page content -->
+
 <?=$page->rockpagebuilder_blocks->render(true)?>
-<!-- ...markup and page content -->
 ```
 
-```php
-<?php namespace ProcessWire;
-// site/templates/RockPageBuilder/blocks/Text.view.php
-?>
-<section class="rpb-text <?=$block->classes()?>" <?=alfred($block)?>>
+In your RockPageBuilder block:
 
+```php
+<?php // site/templates/RockPageBuilder/blocks/Text.view.php?>
+<section class="rpb-text <?=$block->classes()?>" <?=alfred($block)?>>
+    
     <h2><?=$plate->batch($block->title(), 'strtolower|ucwords')?></h2>
 
     <?=$plate->fetch('components::rte_field', ['content' => $block->body])?>
 
 </section>
-
 ```
 
 ## Custom Functions & Extensions
@@ -357,9 +226,7 @@ $plates->templates->loadExtension(new MyCustomPlatesExtension());
 
 ## Plates for ProcessWire Extensions
 
-Plates for ProcessWire comes with custom extensions pre-built for use in your Plates template files. These extensions are optional and can be enabled when configuring the module.
-
-These extensions are purely provided as quality-of-life additions and are not necessary to use Plates in your ProcessWire project.
+Plates for ProcessWire comes with custom extensions pre-built for use in your Plates template files. These extensions are optional and can be enabled when configuring the module. These extensions are purely provided as quality-of-life additions and are not necessary to use Plates in your ProcessWire project.
 
 ---
 
@@ -372,7 +239,7 @@ Helper methods that supplement the [alternate control structures](The "Syntax" p
 Outputs value in an array where key matches the first argument passed
 
 ```php
-<div class="<?=$this->switch($page->favorite_color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'])?>">
+<div class="<?=$this->switch($page->color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'])?>">
     Hello!
 </div>
 ```
@@ -383,18 +250,23 @@ Outputs one of two tags depending on the truthiness of the first argument
 
 ```php
 <<?=$this->tagIf($page->headline, 'h3', 'h2'?> class="text-neutral-500">
-    <?=$page->headline2?>
+    <?=$page->text?>
 </<?=$this->ifTag()?>>
 ```
 
 #### Conditional Attribute
 
-Outputs an attribute if conditional is truthy. Second argument is the attribute. Optional third value is the attribute value.
+Outputs an attribute if conditional is truthy. Second argument is the attribute. Optional third argument is the attribute value.
 
 ```php
+<!-- Two arguments -->
 <button type="submit" <?=$this->attrIf($form->errors, 'disabled')?>>
     Submit Form
 </button>
+
+<!-- Three arguments -->
+<div <?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_values)>
+</div>
 ```
 
 #### Conditional Class Attribute
@@ -442,7 +314,7 @@ Useful when `true` or `false` needs to be output in some way to the page where `
 
 ```php
 <div x-data="{
-       showMap: <?=$this->bit($page->address)?>,
+       showMap: <?=$this->bit($page->show_map)?>,
        init() {
          if (this.showMap) {
             // ...
