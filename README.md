@@ -21,6 +21,8 @@ What Plates for ProcessWire offers:
 
 Read the full list of features on the [Plates PHP website](https://platesphp.com/).
 
+**NOTE:** This is an early release. Test Plates for ProcessWire in you application thoroughly and report bugs by filing an issue on the Git repository.
+
 ## An Introduction to Plates
 
 From the [documentation]():
@@ -29,7 +31,7 @@ From the [documentation]():
 
 ### Why create a ProcessWire module for Plates?
 
-There are many templating languages to choose from, some already have ProcessWire modules to make integration easy. They work for many people, and that's great. What they may be lacking in is the core PHP-first approach that ProcessWire provides developers. Plates provides powerful yet simple tools that feel more at home with ProcessWire than any other templating engine, _hands down_. Whether you've worked with templating engines in the past or not, with or without ProcessWire, you'll be up to speed incredibly fast.
+There are many templating languages to choose from, some already have ProcessWire modules to make integration easy. They work for many people, and that's great. What they may be lacking in is the core PHP-first approach that ProcessWire provides developers. Plates provides powerful yet simple tools that feel more at home with ProcessWire than any other templating engine. Whether you've worked with templating engines in the past or not, with or without ProcessWire, you'll be up to speed incredibly fast.
 
 ### Syntax?
 
@@ -43,9 +45,9 @@ The "Syntax" page in the Plates documentation is just a few style recommendation
 
 Escaping values is extremely important for safety in applications developed in a bare framework like Laravel, CakePHP, Nette, etc.
 
-But ProcessWire isn't a bare framework, it's a _content management framework_ native to storing and outputting content safely by default. ProcessWire handles this with Text formatters. Unless you turn HTML Entitiy formatting off intentionally you don't have to worry about escaping values returned by ProcessWire.
+But ProcessWire isn't a bare framework, it's a _content management framework_ native to storing and outputting content safely by default. ProcessWire handles this with Text formatters. Unless you turn HTML Entitiy formatting off intentionally, you don't have to worry about escaping values returned by ProcessWire.
 
-A good contrast is the [Latte](https://latte.nette.org/) templating engine which forces escaping all values by default and can't be globally disabled. Unless you include the `|noescape` filter, this string will be double escaped and encoded characters that should not be present on the page may be rendered. Unless you intentionally remove the entity encoder Text formatter for each field in ProcessWire, you'll have to add this to every text variable output to the page.
+A good contrast is the [Latte](https://latte.nette.org/) templating engine which forces escaping all values which can't be globally disabled. Unless you include the `|noescape` filter, this string will be double escaped and encoded characters that should not be present on the page may be rendered. Unless you intentionally remove the entity encoder Text formatter for each field in ProcessWire, you'll have to add this to every text variable output to the page.
 ```php
 <title>{$page->title|noescape}</title>
 ```
@@ -57,16 +59,16 @@ With ProcessWire and Plates:
 
 So to re-answer the question "is it more verbose?"… maybe not after all.
 
-If you need escaping, Plates makes it easy:
+If you do need to escape a value, Plates makes it easy:
 ```php
-<title><?=$this->e($page->title)?></title>
+<title><?=$this->e($page->your_field)?></title>
 ```
 
 ## Requirements & Usage
 
 Plates For ProcessWire was created to provide access to Plates in a way that feels native to use with ProcessWire. It is a lightweight instantiation wrapper that preloads the ProcessWire API with Plates to make all ProcessWire objects like `$page`, `$config`, `$user`, etc. ready out of the box.
 
-**This module does not include the Plates package itself.** This allows you to control the version you use, upgrade when desired, prevent package conflicts, and keep this module from requiring "upkeep" releases with another application. Plates for ProcessWire is just an adapter that provides the connection between Plates and your ProcessWire application.
+**This module does not include the Plates package itself.** This allows you to control the version you use, upgrade when desired, and keep this module from requiring "upkeep" releases when Plates is updated. Plates for ProcessWire is just an adapter that provides the connection between Plates and your ProcessWire application.
 
 Requirements:
 
@@ -107,20 +109,21 @@ Documentation reference: [Folders in Plates](https://platesphp.com/engine/folder
 
 Assuming this directory structure:
 ```
-templates/
+site/
+  templates/
     components/
-        image_gallery.php
+      image_gallery.php
     layouts/
-        main.php
+      main.php
     views/
-        home.view.php
-home.php
+      home.view.php
+    home.php
 ```
 
 Folders can be registered in `ready.php`
 
 ```php
-$templatesDir = $this->wire('config')->paths->templates;
+$templatesDir = $config->paths->templates;
 
 $plates->templates->addFolder('components', "{$templatesDir}components");
 $plates->templates->addFolder('layouts', "{$templatesDir}layouts");
@@ -283,7 +286,6 @@ There may be rare occasions where you want to access the Template object outside
 <?php
 	// site/templates/views/home.view.php
 
-	// Make the current template accessible
     // $this is now accessible outside of this Template file using the global $plate variable
     $plates->exposeTemplate($this);
 
@@ -294,7 +296,7 @@ There may be rare occasions where you want to access the Template object outside
 
 **Example**
 
-An example of where exposing the current template is useful is when using [RockPageBuilder](https://www.baumrock.com/en/processwire/modules/rockpagebuilder/). When rendering a RockPageBuilder field, accessing the parent Plates template is not possible by default. By calling the `$plates->exposeTemplate($this)` method in the template that is rendering the RockPageBuilder field, you can then use all of the methods available in your Plates template with the `$plate` variable.
+An example of where exposing the current template is useful is when using [RockPageBuilder](https://www.baumrock.com/en/processwire/modules/rockpagebuilder/). When rendering a RockPageBuilder field, accessing the parent Plates template is not possible by default. By calling the `$plates->exposeTemplate($this)` method in the template that is rendering the RockPageBuilder field, you can then use all of the methods available in your Plates template with the `$plate` variable. 
 
 ```php
 <?php namespace ProcessWire;
@@ -326,42 +328,38 @@ $plates->exposeTemplate($this);
 Documentation reference: [Functions](https://platesphp.com/engine/functions/)
 Documentation reference: [Extensions](https://platesphp.com/engine/extensions/)
 
-**Registering Functions**
+Plates offers clear documentation for implementing your own functions and extensions. In ProcessWire, the best place to register these is in your `/site/ready.php` file where Plates for ProcessWire is loaded and ready ahead of page render.
 
-Like folders, `ready.php` is a great place to register custom functions. Here's an example that takes multiple fields by name and combines them into one string.
+**Registering Functions**
 
 ```php
 <?php namespace ProcessWire;
 // site/ready.php
 
-// ...other directives
-
 $plates->templates->registerFunction('concatFields', function(Page $page, ...$fieldNames) {
-	$values = array_map(fn ($fieldName) => trim($page->$fieldName ?? ''), $fieldNames);
+	$fieldValues = array_map(fn ($fieldName) => trim($page->$fieldName ?? ''), $fieldNames);
 
-    return implode($values);
+    return implode($fieldValues);
 });
 ```
 
 **Registering Extensions**
 
-Like functions, `ready.php` is also well suited for registering custom extensions. Here's an example that imports an extension class located in `site/plates_extensions`
-
 ```php
 <?php namespace ProcessWire;
 // site/ready.php
 
-// Import your custom extension class with `use` or `require_once`
-require_once __DIR__ . 'plates_extensions/MyCustomPlatesExtension.php';
-
-// ...other directives
+// Import your custom extension class with `require_once` or creating a namespace in ProcessWire and the `use` statment
+require_once __DIR__ . 'some/folder/MyCustomPlatesExtension.php';
 
 $plates->templates->loadExtension(new MyCustomPlatesExtension());
 ```
 
 ## Plates for ProcessWire Extensions
 
-Plates for ProcessWire comes with custom extensions pre-built for use in your Plates template files. These extensions are optional and can be loaded by selecting the appropriate checkboxes when configuring the module.
+Plates for ProcessWire comes with custom extensions pre-built for use in your Plates template files. These extensions are optional and can be enabled when configuring the module.
+
+These extensions are purely provided as quality-of-life additions and are not necessary to use Plates in your ProcessWire project.
 
 ---
 
@@ -369,26 +367,18 @@ Plates for ProcessWire comes with custom extensions pre-built for use in your Pl
 
 Helper methods that supplement the [alternate control structures](The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).) provided by PHP that are useful when rendering markup. Many of these are influenced by [Latte Tags](https://latte.nette.org/en/tags).
 
-#### Inline If
-Similar to ternary statement, but may be used with only one argument. Accepts an optional third argument for a falsey output value
-
-```php
-<!-- With one value -->
-<div class="text-red-500 hidden <?=$this->if($page->message_type == 'warning', '!block'?>">
-    <?=$page->message?>
-</div>
-```
-
 #### Switch
+
 Outputs value in an array where key matches the first argument passed
 
 ```php
-<div class="<?=$this->switch($status, ['error' => 'bg-red-500', 'warning' => 'bg-amber-500', 'ok' => 'bg-emerald-500'])?>">
+<div class="<?=$this->switch($page->favorite_color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'])?>">
     Hello!
 </div>
 ```
 
 #### Conditional Tag
+
 Outputs one of two tags depending on the truthiness of the first argument
 
 ```php
@@ -398,15 +388,17 @@ Outputs one of two tags depending on the truthiness of the first argument
 ```
 
 #### Conditional Attribute
-Outputs an attribute if conditional is truthy
+
+Outputs an attribute if conditional is truthy. Second argument is the attribute. Optional third value is the attribute value.
 
 ```php
-<button type="submit" <?=$this->attrIf($form->errors, 'disabled', 'true')?>>
+<button type="submit" <?=$this->attrIf($form->errors, 'disabled')?>>
     Submit Form
 </button>
 ```
 
 #### Conditional Class Attribute
+
 Shorthand for conditional attribute, but assumes class. Can be used with one or both values
 
 ```php
@@ -419,13 +411,28 @@ Shorthand for conditional attribute, but assumes class. Can be used with one or 
 
 ### Functions Extension
 
-The Functions Extension provides an array of helper functions to make working with values easier. It is also built for ProcessWire specifically. Functions that accept arrays also accept WireArray and WireArray derived objects. While WireArray objects may have similar methods, these are chainable with `$this->batch()` and work whether WireArray or array is passed to make working with different object types easier.
+The Functions Extension provides an selection of helper functions to make working with values easier. It is also built for ProcessWire specifically. Functions that accept arrays also accept WireArray and WireArray derived objects. While WireArray objects may have similar methods, these are chainable with `$this->batch()` and work whether WireArray or array is passed to make working with different object types easier.
 
 Many of these functions are influenced by [Latte Filters](https://latte.nette.org/en/filters). Any function that accepts one argument can be chained using the `$this->batch()` method call. If functions accept more than one argument but may still execute when only one argument is passed, it can still be batched. This applies to both standard PHP functions as well as any custom extension functions.
 
 Most functions are null safe where possible and impressive batchable chains can be created using combinations of these functions and native PHP functions.
 
 Extension functions that can be batched are noted with **Batchable** for easy reference
+
+#### Batch Array
+
+Extends Plates-like `batch()` method to each item in an array
+
+```php
+<?php foreach ($this->batchArray(['hello THERE', ' <div>how are you?</div>'], 'stripHtml|ucfirst') as $text): ?>
+    <p><?=$text?></p>
+<?php endforeach ?>
+
+<!-- Process large numbers of field values easily -->
+<?php foreach ($this->batchArray($activities->explode('summary'), 'stripHtml|ucfirst') as $text): ?>
+    <p><?=$text?></p>
+<?php endforeach ?>
+```
 
 #### Bit
 
@@ -438,7 +445,7 @@ Useful when `true` or `false` needs to be output in some way to the page where `
        showMap: <?=$this->bit($page->address)?>,
        init() {
          if (this.showMap) {
-            // Initialize a Google map...
+            // ...
          }
        }
      "
@@ -462,11 +469,11 @@ Returns a number limited to and inclusive of the max and min values
 Returns whether a number can be divided by another
 
 ```php
-<ul class="grid gap-2 <?=$this->divisibleBy($page->repeater->count(), 3) ? 'grid-cols-3' : 'grid-cols-2'?>">
-<?php foreach ($page->repeater as $item):?>
+<ul class="grid gap-2 <?=$this->divisibleBy($page->books->count(), 3) ? 'grid-cols-3' : 'grid-cols-2'?>">
+<?php foreach ($page->books as $book):?>
     <li>
-        <p><?=$item->book_name?></p>
-        <p><?=$item->author_name?></p>
+        <p><?=$book->title?></p>
+        <p><?=$book->author?></p>
     </li>
 <?php endforeach?>
 </ul>
@@ -479,11 +486,7 @@ Returns whether a number is even or not
 **Batchable**
 
 ```php
-<?php if ($this->even($page->number_field)):?>
-  <div>Even Steven</div>
-<?php else:?>
-  <div>Odd Man Out</div>
-<?php endif?>
+<div><?=$this->even($page->number) ? 'Even Steven' : 'Odd Man Out'?></div>
 ```
 
 #### Odd
@@ -493,11 +496,7 @@ Returns whether a number is odd or not
 **Batchable**
 
 ```php
-<?php if ($this->odd($page->number_field)):?>
-  <div>You're Odd</div>
-<?php else:?>
-  <div>Equal Slice</div>
-<?php endif?>
+<div><?=$this->odd($page->number) ? "You're Odd" : 'Equal Slice'?></div>
 ```
 
 #### Length
@@ -577,21 +576,6 @@ Truncates a string, wrapper for `WireTextTools::truncate()` method, accepts all 
 <div>Summary: <?=$this->truncate($page->description, 500)?></div>
 ```
 
-#### Batch Array
-
-Extends Plates-like `batch()` method to each item in an array
-
-```php
-<?php foreach ($this->batchArray(['<span>hello there</span>', ' <div>how are you?</div>'], 'stripHtml|ucfirst') as $text): ?>
-    <p><?=$text?></p>
-<?php endforeach ?>
-
-<!-- Process large numbers of field values easily -->
-<?php foreach ($this->batchArray($activities->explode('summary'), 'stripHtml|ucfirst') as $text): ?>
-    <p><?=$text?></p>
-<?php endforeach ?>
-```
-
 #### First
 
 Returns the first item in an array, WireArray, or first character in a string, null safe 
@@ -651,7 +635,7 @@ $people = [
 <?php endforeach ?>
 
 <!-- Pass true/'asc'/'desc' as the third argument to sort by group keys -->
-<?php foreach ($this->group($people, 'age', true) as $age => $persons): ?>
+<?php foreach ($this->group($people, 'age', 'asc') as $age => $persons): ?>
     <div>
         <p>Age: <?=$age?></p>
         <ul>
@@ -663,7 +647,7 @@ $people = [
 <?php endforeach ?>
 
 <!-- Group WireArray objects by property. If group was executed on a WireArray object, grouped items will be WireArrays -->
-<?php foreach ($this->group($page->people, 'age', true) as $age => $persons): ?>
+<?php foreach ($this->group($page->people, 'age', 'asc') as $age => $persons): ?>
     <div>
         <p>Age: <?=$age?></p>
         <ul>
@@ -697,30 +681,216 @@ Creates a query string or adds a query to a URL
 <a href="<?=$this->url($page->external_url, ['utm_source' => $page->title, 'utm_campaign' => $page->campaign])?>">Find out more</a>
 ```
 
+### Asset Loader Extension
+
+The asset loader extension provides tools to easily manage loading CSS, JS, and font assets. In the case of CSS and JS files,  cache parameter strings based on the last update time for files are automatically added when rendering to the page. It also provides tools for preloading assets as needed. With the asset loader extension your `<link>` and `<script>` tags are automatically created for you.
+
+This extension provides two ways to interact with your files:
+
+**Using Folder Definitions**
+
+For a native feel that matches Plates' own [Folders](https://platesphp.com/engine/folders/) feature, you may set up folder definitions within the Plates for ProcessWire module config. To do this, enable the Asset Loader extension, then specify folder names and associated directories under "Asset Loader - Folder Definitions". Folder names and their locations are entirely your choice and directories may be located anywhere relative to the root directory. Example:
+
+```
+css::/site/assets/bundle/styles
+styles::/site/resources/css
+js::/site/templates/javascript
+scripts::/site/js
+lib::/lib
+fonts::/site/fonts
+someCompletelyRandomName::/any/path/you/want
+```
+
+**Using Relative Paths**
+
+If folder definitions feel like a little too much black magic or you just prefer using file paths, this extension will work using that method as well. All of the features will work exactly the same way and as long as the file exists, they'll also be given a cache busting parameter as well. There are no downsides to using file paths over folder definitions.
+
+#### Linking Assets
+
+Linking assets is easy. If you are using folder definitions, the extension will automatically output the correct HTML tag. If you're not using folder definitions, just use the appropriate function. If the file is found on the filesystem, a cache busting parameter will be added, otherwise it will be left off.
+
+**Stylesheets**
+
+```php
+<!-- With folder definitions -->
+<?=$this->linkAsset('css::styles.css')?>
+
+<!-- Without folder definitions -->
+<?=$this->linkCss('/path/to/your/styles.css')?>
+
+<!-- Output -->
+<link href="/path/to/your/styles.css?v=1734630086" rel="stylesheet">
+
+<!-- You may also pass an arbitrary amount of attributes as a second array argument using either rendering method -->
+<?=$this->linkAsset('css::styles.css', ['id' => 'some-id', 'data-some-attribute'])?>
+
+<!-- Output -->
+<link id="some-id" data-some-attribute href="/site/assets/bundle/styles/app.css?v=1734630086" rel="stylesheet">
+```
+
+**JavaScript**
+
+```php
+<!-- With folder definitions -->
+<?=$this->linkAsset('js::script.js')?>
+
+<!-- Without folder definitions -->
+<?=$this->linkJs('/path/to/your/script.js')?> 
+
+<!-- Output: -->
+<script src="/path/to/your/script.js?v=1734630080"></script>
+
+<!-- Also takes optional second argument array of attributes -->
+<?=$this->linkJs('/path/to/your/script.js', ['id' => 'some-id', 'data-some-attribute'])?> 
+
+<!-- Output -->
+<script id="some-id" data-some-attribute src="/path/to/your/script.js?v=1734630080"></script>
+```
+
+#### Inlining Assets
+
+You can also inline the contents of CSS or JS assets
+
+**Stylesheets**
+ 
+```php
+<!-- With folder definitions -->
+<?=$this->inlineAsset('css::styles.css')?>
+
+<!-- Without folder definitions -->
+<?=$this->inlineJs('/path/to/your/styles.css')?> 
+
+<!-- Output: -->
+<style>
+  body {
+    font-family: 'Helvetica';
+  }
+</style>
+
+<!-- Also takes optional second argument array of attributes, works with either method -->
+<?=$this->inlineAsset('css::styles.css', ['id' => 'some-id', 'data-some-attribute'])?> 
+
+<!-- Output -->
+<style id="some-id" data-some-attribute>
+  body {
+    font-family: 'Helvetica';
+  }
+</style>
+```
+
+**JavaScript**
+
+```php
+<!-- With folder definitions -->
+<?=$this->inlineAsset('js::script.js')?>
+
+<!-- Without folder definitions -->
+<?=$this->inlineJs('/path/to/your/script.js')?> 
+
+<!-- Output: -->
+<script>
+  console.log('Hello');
+</script>
+
+<!-- Also takes optional second argument array of attributes, works with either method -->
+<?=$this->inlineAsset('js::script.js', ['id' => 'some-id', 'data-some-attribute'])?> 
+
+<!-- Output -->
+<script id="some-id" data-some-attribute>
+  console.log('Hello');
+</script>
+```
+
+#### Preloading Assets
+
+You can also preload assets. Preloading assets works with CSS, JS, and font files. CSS and JS will have the correct cache busting parameter appended to the URL
+
+```php
+<!-- You may pass any type of file when using configured folders -->
+<?=$this->preloadAsset('css::styles.css')?>
+<?=$this->preloadAsset('js::script.js')?>
+<?=$this->preloadAsset('fonts::your-font.woff')?>
+
+<!-- Withoud configured folders, call the respective methods -->
+<?=$this->preloadCss('/path/to/your/styles.css')?>
+<?=$this->preloadJs('/path/to/your/script.js')?>
+<?=$this->preloadFont('/path/to/your-font.woff')?>
+
+<!-- Output respectively -->
+<link rel="preload" href="/path/to/your/styles.css?v=1734630086" as="style">
+<link rel="preload" href="/path/to/your/script.js?v=1734630080" as="script">
+<link rel="preload" href="/path/to/your-font.woff" as="font" crossorigin>
+```
+
+#### Asset Loader Debug Mode
+
+Enabling the asset loader extension will provide a method to enable a debug mode exclusively for this extension. This may be useful for troubleshooting during development, but is not recommended for use in production. Enabling debug mode will cause exceptions to be thrown if attemping to load/inline/preload a file that does not exist or attempt to use a configured folder that has not been set up on the module config page.
+
 ### Wire Extension
 
-The Wire Extension provides easy access to ProcessWire utilities that would otherwise need to be instantiated.
-
-#### WireRandom
-Creates a WireRandom object and returns for use, memoizes
+The Wire Extension provides easy access to ProcessWire utilities that would otherwise need to be instantiated. All objects are memoized except for `wireArray()` which returns a new instance each time
 
 ```php
-<div>Here's a random string <?=$this->wireRandom()->alphanumeric()?></div>
-```
+<!-- Get an instance of WireRandom -->
 
-#### WireTextTools
-Creates a WireRandom object and returns for use, memoizes
+<div>Here is a random string <?=$this->wireRandom()->alphanumeric()?></div>
 
-```php
-<?php $this->wireTextTools()->findPlaceholders('Hello {name}, how are you?')?>
-```
+<!-- Get an instace of WireTextTools -->
 
-##### WireArray
-Creates a new WireArray object and optionally populates if arguments passed
+<p><?=$this->wireTextTools()->truncate($page->text_field, 250)?></p>
 
-```php
+<!-- Create a new WireArray instance -->
+
 <p>Buildings taller than 50 feet:</p>
 <?php foreach ($this->wireArray($somePage, $anotherPage, $lastPage)->filter('height>=50') as $building): ?>
   <p><?=$building->title?></p>
 <?php endforeach ?>
+```
+
+## Tips for tidy templates
+
+There are many native language constructs in PHP that can clean up your templating further, no syntactic sugar required. Employing these makes for cleaner and easier to read templates.
+
+```php
+// Rendering values
+// Instead of this:
+<?php echo $page->field; ?>
+
+// Short echo
+<?=$page->field?>
+
+// Control structures
+// Instead of this:
+<?php if ($page->field): ?>
+    <?=$page->field?>
+<?php endif; ?>
+
+// Ternary. The null value may also be a fallback value
+<?=$page->field ? $page->field : null?>
+
+// Elvis, a shorter ternary
+<?=$page->field ?: null?>
+
+// Nullsafe operator, when a variable may be null and a property needs to be accessed. Can be combined with an Ternary or Elvis operator
+<?=$person?->name?>
+// Nested
+<?=$person?->name?->first?>
+
+// Multiple values
+// Instead of this:
+Hello <?=$page->first_name?> <?=$page->first_name?>!
+
+// Try this:
+Hello <?="{$page->first_name} {$page->last_name}"?>!
+
+// String interpolation lets you execute functions
+Hello <?=trim("{$page->first_name} {$page->last_name}")?>
+
+Use string interpolation to batch
+<?php $fullName = trim("{$page->first_name} {$page->last_name}") ?>
+<?=ucwords($fullName)?>
+
+Try this:
+<?=$this->batch("{$page->first_name} {$page->last_name}", 'trim|ucwords')?>
+
 ```

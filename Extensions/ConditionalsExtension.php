@@ -27,11 +27,9 @@ class ConditionalsExtension implements ExtensionInterface
         $engine->registerFunction('attrIf', [$this, 'attrIf']);
         $engine->registerFunction('attrsIf', [$this, 'attrsIf']);
         $engine->registerFunction('classIf', [$this, 'classIf']);
-        $engine->registerFunction('if', [$this, 'if']);
-        $engine->registerFunction('ifVal', [$this, 'ifVal']);
         $engine->registerFunction('ifTag', [$this, 'ifTag']);
-        $engine->registerFunction('switch', [$this, 'switch']);
         $engine->registerFunction('tagIf', [$this, 'tagIf']);
+        $engine->registerFunction('switch', [$this, 'switch']);
     }
 
     /**
@@ -79,29 +77,6 @@ class ConditionalsExtension implements ExtensionInterface
     public function ifTag(): ?string
     {
         return $this->ifTag;
-    }
-
-    /**
-     * Returns values depending on conditional truthiness
-     * @param  mixed      $conditional Value checked
-     * @param  mixed|null $valueTrue   Value returned if conditional is truthy
-     * @param  mixed|null $valueFalse  Value returned if conditional is falsey, optional
-     * @return mixed                   Value determined by $conditional truthiness
-     */
-    public function if(mixed $conditional, mixed $valueTrue = null, mixed $valueFalse = null): mixed
-    {
-        return !!$conditional ? $valueTrue : $valueFalse;
-    }
-
-    /**
-     * Returns a value if truthy, null otherwise, simplified for use in batches
-     * - Batchable
-     * @param  mixed  $value Value to return if truthy
-     * @return mixed
-     */
-    public function ifVal(mixed $value): mixed
-    {
-        return !!$value ?: null;
     }
 
     /**

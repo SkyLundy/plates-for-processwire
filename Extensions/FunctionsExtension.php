@@ -77,6 +77,7 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('replace', [$this, 'replace']);
         $engine->registerFunction('replaceRE', [$this, 'replaceRE']);
         $engine->registerFunction('reverse', [$this, 'reverse']);
+        $engine->registerFunction('singleSpaced', [$this, 'singleSpaced']);
         $engine->registerFunction('slice', [$this, 'slice']);
         $engine->registerFunction('split', [$this, 'split']);
         $engine->registerFunction('stripHtml', [$this, 'stripHtml']);
@@ -313,6 +314,19 @@ class FunctionsExtension implements ExtensionInterface
      */
 
     /**
+     * Ensures string is single spaced, null safe
+     *
+     * - Batchable
+     *
+     * @param  mixed  $value Value to single space
+     * @return string|null
+     */
+    public function singleSpaced(?string $value): ?string
+    {
+        return is_string($value) ? preg_replace('/\s{1,}/U', ' ', $value) : $value;
+    }
+
+    /**
      * Replaces all occurrences of the search string with the replacement string. Null safe, accepts
      * ints as value replacements
      *
@@ -449,7 +463,15 @@ class FunctionsExtension implements ExtensionInterface
 
         foreach ($functions as $function) {
             $values = array_map(function($item) use ($function) {
-                return method_exists($this, $function) ? $this->$function($item) : $function($item);
+                if (method_exists($this, $function)) {
+                    return $this->$function($item);
+                }
+
+                if (function_exists($function)) {
+                    return $function($item);
+                }
+
+                return $item;
             }, $values);
         }
 
@@ -608,7 +630,6 @@ class FunctionsExtension implements ExtensionInterface
         is_int($values) && $values = (int) $values;
         is_string($values) && $values = str_split($values);
 
-        //
         if ($index > count($values) - 1) {
             return null;
         }
@@ -739,7 +760,6 @@ class FunctionsExtension implements ExtensionInterface
         return $result;
     }
 
-
     /**
      * Groups an array of objects or array of arrays by a property or key
      * @param  array|WireArray|string $values Array to group from
@@ -757,6 +777,27 @@ class FunctionsExtension implements ExtensionInterface
             default => array_slice($value, $start, $length),
         };
     }
+
+    /**
+     * Adds all of the values in an array, associative array by key, array of stdClass objects by
+     * property, or a WireArray by property. Null safe, null values are equivalent of zero
+     *
+     * @param  null   $values
+     */
+    // public function sum(array|WireArray|null $values, ?string $property = null): int
+    // {
+    //     if (is_null($values)) {
+    //         return 0;
+    //     }
+
+    //     $isWireArray = $this->isWireArray($values);
+
+    //     $isWireArray && !$property && throw new LogicException(
+    //         "A property must be provided to sum a WireArray"
+    //     );
+
+    //     return 0;
+    // }
 
     /**
      * URLs
