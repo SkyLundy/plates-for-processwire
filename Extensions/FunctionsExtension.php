@@ -32,8 +32,10 @@ namespace Plates\Extensions;
 use DateTime;
 use DateTimeImmutable;
 use DateTimeInterface;
+use InvalidArgumentException;
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
+use Exception;
 use ProcessWire\{WireArray, WireTextTools};
 
 use function ProcessWire\wire;
@@ -54,24 +56,23 @@ class FunctionsExtension implements ExtensionInterface
 
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
         $engine->registerFunction('bit', [$this, 'bit']);
-        $engine->registerFunction('capitalize', [$this, 'capitalize']);
         $engine->registerFunction('clamp', [$this, 'clamp']);
-        $engine->registerFunction('dateTime', [$this, 'dateTime']);
+        $engine->registerFunction('csv', [$this, 'csv']);
+        $engine->registerFunction('difference', [$this, 'difference']);
         $engine->registerFunction('divisibleBy', [$this, 'divisibleBy']);
         $engine->registerFunction('eq', [$this, 'eq']);
         $engine->registerFunction('even', [$this, 'even']);
         $engine->registerFunction('falseToNull', [$this, 'falseToNull']);
         $engine->registerFunction('first', [$this, 'first']);
-        $engine->registerFunction('formatDate', [$this, 'formatDate']);
         $engine->registerFunction('group', [$this, 'group']);
-        $engine->registerFunction('isA', [$this, 'isA']);
         $engine->registerFunction('jsonDecodeArray', [$this, 'jsonDecodeArray']);
         $engine->registerFunction('last', [$this, 'last']);
         $engine->registerFunction('length', [$this, 'length']);
-        $engine->registerFunction('lower', [$this, 'lower']);
+        $engine->registerFunction('merge', [$this, 'merge']);
         $engine->registerFunction('nth', [$this, 'nth']);
         $engine->registerFunction('nth1', [$this, 'nth1']);
         $engine->registerFunction('odd', [$this, 'odd']);
+        $engine->registerFunction('product', [$this, 'product']);
         $engine->registerFunction('randFrom', [$this, 'randFrom']);
         $engine->registerFunction('random', [$this, 'random']);
         $engine->registerFunction('replace', [$this, 'replace']);
@@ -81,54 +82,12 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('slice', [$this, 'slice']);
         $engine->registerFunction('split', [$this, 'split']);
         $engine->registerFunction('stripHtml', [$this, 'stripHtml']);
+        $engine->registerFunction('sum', [$this, 'sum']);
         $engine->registerFunction('trim', [$this, 'trim']);
         $engine->registerFunction('truncate', [$this, 'truncate']);
         $engine->registerFunction('unique', [$this, 'unique']);
-        $engine->registerFunction('upper', [$this, 'upper']);
         $engine->registerFunction('url', [$this, 'url']);
         $engine->registerFunction('wireGetArray', [$this, 'wireGetArray']);
-    }
-
-    /**
-     * Dates
-     */
-
-    /**
-     * Creates and returns a new DateTimeInterface object, immutable by default
-     *
-     * @param  string|int   $dateTime  Parseable date value
-     * @param  string|null  $timezone  Optional timezone
-     * @param  bool|boolean $immutable Return mutable or immutable instance
-     * @return DateTimeInterface
-     */
-    public function dateTime(
-        string|int $dateTime = 'now',
-        ?string $timezone = null,
-        bool $immutable = true
-    ): DateTimeInterface {
-        return match (true) {
-            $immutable => new DateTimeImmutable($dateTime, $timezone),
-            default => new DateTime($dateTime, $timezone),
-        };
-    }
-
-    /**
-     * Format a date string to any format recognized by PHP DateTimeImmutable, mull safe
-     *
-     * @param  int|string|null   $date   Date string to parse
-     * @param  string $format Format to output
-     * @return string|null
-     */
-    public function formatDate(
-        int|string|null $date,
-        string $format,
-        ?string $timezone = null
-    ): ?string {
-        if (is_null($date)) {
-            return null;
-        }
-
-        return $this->dateTime($date, $timezone)->format($format);
     }
 
     /**
@@ -327,106 +286,6 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Replaces all occurrences of the search string with the replacement string. Null safe, accepts
-     * ints as value replacements
-     *
-     * Replacing with null is equivalent to replacing with an empty string
-     *
-     * @param string|int|array|null $value       Value to replace strings within
-     * @param string|int|array|null $search      String to find, or array of find/replace key value pairs
-     * @param string|int|null       $replacement Replacement value if $search is not an array
-     */
-    public function replace(
-        ?string $value,
-        string|int|array|null $find,
-        string|int|null $replace = null
-    ): ?string {
-        if (is_null($value) || is_null($find)) {
-            return null;
-        }
-
-        if (is_array($find)) {
-            foreach ($find as $findValue => $replaceValue) {
-                $value = str_replace($findValue, (string) $replaceValue, $value);
-            }
-
-            return $value;
-        }
-
-        if (is_null($replace)) {
-            return $value;
-        }
-
-        return str_replace($find, $replace, $value);
-    }
-
-    /**
-     * Replaces values in string using RegEx pattern, null safe, accepts ints as replacements.
-     *
-     * Passing null for $replace is equivalent of empty string
-     *
-     * @param  string           $value   Value to replace
-     * @param  string           $pattern RegEx pattern
-     * @param  string|int|null  $replace Value to replace matches with
-     * @return string|null
-     */
-    public function replaceRE(?string $value, string $pattern, string|int|null $replace): ?string
-    {
-        if (is_null($value)) {
-            return null;
-        }
-
-        return preg_replace($pattern, (string) $replace, $value);
-    }
-
-    /**
-     * Converts a string lower case, ints ignored and returned
-     *
-     * - Batchable
-     *
-     * @param  string|int|null  $value Value or array of values
-     * @return string|int|null
-     */
-    public function lower(string|array|int|null $value): string|array|null
-    {
-        if (is_int($value)) {
-            return $value;
-        }
-
-        return mb_strtolower($value, 'UTF-8');
-    }
-
-    /**
-     * Converts a string to upper case, null safe, ints ignored and returned.
-     *
-     * - Batchable
-     *
-     * @param  string|int|null  $value Value or array of values
-     * @return string|int|null
-     */
-    public function upper(string|int|null $value): string|int|null
-    {
-        if (is_int($value)) {
-            return $value;
-        }
-
-        return mb_strtoupper($value, 'UTF-8');
-    }
-
-    /**
-     * Capitalize first letter of each word in a string, null safe
-     *
-     * - Batchable
-     *
-     * @param  string|null $value Value to capitalize
-     * @return string|null
-     */
-    public function capitalize(?string $value): ?string
-    {
-        return mb_convert_case((string) $value, MB_CASE_TITLE, 'UTF-8');
-    }
-
-    /**
      * Decodes a JSON string to an array. Makes json_decode with array option batchable
      *
      * - Batchable
@@ -479,9 +338,27 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Converts a WireArray to an array, optionally recursive
+     * Converts an array of values, or WireArray with specified property to a CSV string
+     * Null safe
      *
      * - Batchable
+     */
+    public function csv(array|WireArray $values = null, ?string $property = null): string
+    {
+        if (is_null($values)) {
+            return '';
+        }
+
+        if ($this->isWireArray($values)) {
+            $values = $values->explode($property);
+        }
+
+        return implode(', ', $values);
+    }
+
+
+    /**
+     * Converts a WireArray to an array, optionally recursive
      *
      * @param  WireArray    $wireArray WireArray object to convert
      * @param  bool|boolean $recursive Optionally execute on nested WireArray and WireArray derived objects
@@ -505,6 +382,51 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
+     * Merges an arbitrary number of arrays or WireArray objects into one. Must all be of the same
+     * type. Null safe. Null values are removed, empty value returned is an array
+     *
+     * Invalid values that cannot be merged are ignored
+     *
+     * @param  array|WireArray|null $values Values to merge
+     * @return array|WireArray
+     */
+    public function merge(array|WireArray|null ...$values): array|WireArray
+    {
+        $values = array_filter(
+            $values,
+            fn ($item) => $this->isWireArray($item) || is_array($item)
+        );
+
+        $types = array_reduce($values, function($allTypes, $item) {
+            $allTypes[] = gettype($item);
+
+            return $allTypes;
+        }, []);
+
+        $types = array_unique($types);
+
+        if (!count($types)) {
+            return [];
+        }
+
+        count($types) > 1 && throw new InvalidArgumentException(
+            'Cannot merge collections of different types.'
+        );
+
+        $type = end($types);
+
+        if ($type === 'array') {
+            return array_merge(...$values);
+        }
+
+        return array_reduce(
+            $values,
+            fn ($wireArray, $item) => $wireArray->import($item),
+            new WireArray()
+        );
+    }
+
+    /**
      * Arrays/WireArrays/Strings
      *
      * Assistants that work with either arrays or arrays and strings
@@ -522,7 +444,7 @@ class FunctionsExtension implements ExtensionInterface
     {
         return match (true) {
             is_null($value) => 0,
-            is_string($value) => mb_strlen($value),
+            is_string($value) => strlen($value),
             $this->isWireArray($value) => $value->count(),
             default => count($value),
         };
@@ -779,25 +701,49 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Adds all of the values in an array, associative array by key, array of stdClass objects by
-     * property, or a WireArray by property. Null safe, null values are equivalent of zero
+     * Adds all of the values in an array, list array by index, associative array by key, array of
+     * stdClass objects by property, or a WireArray by property. Null safe.
      *
-     * @param  null   $values
+     * Empty strings and null values are equivalent of zero.
+     * Summable values may be any value that is_numeric. Integers, floats, numeric strings
+     *
+     * @param array|WireArray|null $values
+     * @param string|int|null $property Index or property when summing arrays/objects
      */
-    // public function sum(array|WireArray|null $values, ?string $property = null): int
-    // {
-    //     if (is_null($values)) {
-    //         return 0;
-    //     }
+    public function sum(array|WireArray|null $values, string|int|null $property = null): int|float
+    {
+        return $this->mathsOperation('sum', $values, $property);
+    }
 
-    //     $isWireArray = $this->isWireArray($values);
+    /**
+     * Subtracts all of the values in an array, list array by index, associative array by key, array of
+     * stdClass objects by property, or a WireArray by property. Null safe.
+     *
+     * Empty strings and null values are equivalent of zero.
+     * Summable values may be any value that is_numeric. Integers, floats, numeric strings
+     *
+     * @param array|WireArray|null $values
+     * @param string|int|null $property Index or property when summing arrays/objects
+     */
+    public function difference(array|WireArray|null $values, string|int|null $property = null): int|float
+    {
+        return $this->mathsOperation('difference', $values, $property);
+    }
 
-    //     $isWireArray && !$property && throw new LogicException(
-    //         "A property must be provided to sum a WireArray"
-    //     );
-
-    //     return 0;
-    // }
+    /**
+     * Adds all of the values in an array, list array by index, associative array by key, array of
+     * stdClass objects by property, or a WireArray by property. Null safe.
+     *
+     * Empty strings and null values are equivalent of zero.
+     * Summable values may be any value that is_numeric. Integers, floats, numeric strings
+     *
+     * @param array|WireArray|null $values
+     * @param string|int|null $property Index or property when summing arrays/objects
+     */
+    public function product(array|WireArray|null $values, string|int|null $property = null): int|float
+    {
+        return $this->mathsOperation('product', $values, $property);
+    }
 
     /**
      * URLs
@@ -823,33 +769,6 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Gets the type of the value passed, optionally specify a class or expected type to check
-     * against
-     *
-     * Accepts 'float' in place of 'double' optionally
-     *
-     * @param  mixed   $value       Value to get type of
-     * @param  string  $classOrType Optional type to check against
-     * @return string|bool
-     */
-    public function isA(mixed $value, ?string $classOrType = null): string|bool
-    {
-        if (is_object($value) && str_ends_with($classOrType ?? '', '::class')) {
-            $className = str_replace('::class', '', $classOrType);
-
-            $valueClass = get_class($value);
-            $valueClass = explode('\\', $valueClass);
-            $valueClass = end($valueClass);
-
-            return $className === $valueClass;
-        }
-
-        $classOrType === 'float' && $classOrType = 'double';
-
-        return gettype($value) === $classOrType;
-    }
-
-    /**
      * Helper method to check if a value is a WireArray instance
      * @param  mixed   $value Value to check
      * @return bool
@@ -857,5 +776,76 @@ class FunctionsExtension implements ExtensionInterface
     public function isWireArray(mixed $value): bool
     {
         return is_a($value, WireArray::class, true);;
+    }
+
+
+    /**
+     * Executes a simple math operation on the provided object. Null and empty strings are counted
+     * as zero
+     *
+     * @param string               $operation Operation to execute on the values
+     * @param array|WireArray|null $values
+     * @param string|int|null $property Index or property when summing arrays/objects
+     * @return int|float
+     */
+    private function mathsOperation(
+        string $operation,
+        array|WireArray|null $values,
+        string|int|null $property = null
+    ): int|float {
+        if (is_null($values)) {
+            return 0;
+        }
+
+        $operator = match ($operation) {
+            'sum' => '+',
+            'difference' => '-',
+            'product' => '*',
+            default => throw new InvalidArgumentException("'{$operation}' is not a valid operation"),
+        };
+
+        if ($this->isWireArray($values)) {
+            !$property && throw new Exception(
+                "A property must be provided to get the {$operation} of a WireArray"
+            );
+
+            $values = $values->explode($property);
+        }
+
+        // Parses a value and attempts to get an operational integer or float or string representation
+        $parseValue = function(mixed $value) use ($property, $operation): int|float|string {
+            // Reject if a property is required and not provided
+            is_object($value) || is_array($value) && !$property && throw new Exception(
+                "A property must be provided to get the {$operation} of array or object values"
+            );
+
+            if (is_numeric($value)) {
+                return $value;
+            }
+
+            $valueType = gettype($value);
+
+            return match ($valueType) {
+                'object' => $value->$property,
+                'array' => $value[$property],
+                'NULL' => 0,
+                'string' && !$value => 0,
+                default => throw new Exception("Cannot get the {$operation} of a {$valueType}"),
+            };
+        };
+
+        $initialValue = 0;
+
+        if ($operation === 'difference' || $operation === 'product') {
+            $firstValue = array_shift($values);
+
+            $initialValue = $parseValue($firstValue);
+        }
+
+        return array_reduce($values, function($total, $value) use ($parseValue, $operator) {
+            $parsedValue = $parseValue($value);
+
+            return $total = eval('return ' . "{$total}{$operator}{$parsedValue}" . ';');
+        }, $initialValue);
     }
 }
