@@ -149,7 +149,7 @@ Returns whether a number can be divided by another
 
 ### eq
 
-Alias for [`nth`](#nth) that mirrors that WireArray `eq` method
+Alias for [`nth`](#nth)
 
 ### even
 
@@ -168,12 +168,29 @@ Converts a value of `false` to `null`, all other values return original value
 **Batchable**
 
 ```php
-<div><?=$this->odd($page->number) ? "You're Odd" : 'Equal Slice'?></div>
+<div><?=$this->falseToNull($page->has_a_pet)?></div>
+```
+
+### filterNull
+
+Removes all instances of null from an array or WireNull objects from WireArray and WireArray derived objects. Returns a new array or WireArray instance. Useful for reducing the need for secondary checking for `id` before outputting when working with WireArrays.
+
+```php
+<ul>
+  <?php foreach ($this->filterWireNull($page->pets) as $pet): ?>
+    <li>
+      <?=$pet->name?>
+    </li>
+  <?php endforeach ?>
+</ul>
+
 ```
 
 ### first
 
-Returns the first item in an array, WireArray, or first character in a string, null safe
+Returns the first item in an array, WireArray, first character in a string, or first number in an integer, null safe.
+
+Optional second boolean argument will remove all null or WireNull items from the array before getting the first item.
 
 **Batchable**
 
@@ -182,10 +199,10 @@ Returns the first item in an array, WireArray, or first character in a string, n
 <div>The first movie showing is: <?=$this->first(['10:00', '12:30', '15:45'])?>.</div>
 
 <!-- Works with strings -->
-<div>Your name starts with the letter <?=$this->first($page->person_name)?>.</div>
+<div>Your name starts with the letter <?=$this->batch($this->first($page->person_name), 'strtoupper')?>.</div>
 
 <!-- Works with WireArray and WireArray derived objects -->
-<div>The winner of the race is: <?=$this->batch($page->race_results, 'first|strtolower|ucwords'?>.</div>
+<div>True first item, nulls removed: <?=$this->first($page->race_results, true)->title?>.</div>
 ```
 
 ### group
@@ -240,15 +257,61 @@ $people = [
 <?php endforeach ?>
 ```
 
+### isWireArray
 
-### odd
+Primarily used internally by the extension but provided in case it's useful. Identifies all WireArray and WireArray derived objects
 
-Returns whether a number is odd or not
+```php
+
+<?php if ($this->isWireArray($page->image_gallery)): ?>
+  <ul>
+    <?php foreach ($page->image_gallery as $image): ?>
+      <li>
+        <img src="<?=$image->url?>" alt="<?=$image->description?>">
+      </li>  
+    <?php endforeach ?>
+  </ul>
+<?php endif ?>
+```
+
+### jsonDecodeArray
+
+Makes decoding to an array a batchable by eliminating the second boolean argument of PHP's `json_decode()` function while retaining transparency for all other function parameters. 
 
 **Batchable**
 
 ```php
-<div><?=$this->odd($page->number) ? "You're Odd" : 'Equal Slice'?></div>
+<ul>
+  <?php foreach ($this->jsonDecodeArray($libraryApiResponse) as $author => $books): ?>
+    <li>
+      <h2><?=$author?></h2>
+      <ul>
+        <?php foreach ($books as $book): ?>
+          <li><?=$book->title?></li>
+        <?php endforeach ?>
+      </ul>
+    </li>  
+  <?php endforeach ?>
+</ul>
+```
+
+### last
+
+Returns the last item in an array, WireArray, or last character in a string, null safe
+
+Optional second boolean argument will remove all null or WireNull items from the array before getting the first item.
+
+**Batchable**
+
+```php
+<!-- Works with arrays -->
+<div>The last movie showing is: <?=$this->first(['10:00', '12:30', '15:45'])?>.</div>
+
+<!-- Works with strings -->
+<div>Your name ends with the letter <?=$this->first($page->person_name)?>.</div>
+
+<!-- Works with WireArray and WireArray derived objects -->
+<div>True last item, nulls removed: <?=$this->last($page->race_results, true)->title?>.</div>
 ```
 
 ### length
@@ -266,6 +329,57 @@ Gets the length of an array, WireArray, or string, null safe
 
 <!-- Works with WireArray and WireArray derived objects -->
 <div>You have <?=$this->length($page->family_members)?> family members coming to dinner.</div>
+```
+
+### merge
+
+Merges an arbitrary number of arrays or WireArray objects into one. Must all be of the same type.
+
+**Batchable**
+
+```php
+<!-- Works with arrays -->
+<div>You have <?=$this->length(['book', 'hat', 'sunglasses'])?> items in your cart.</div>
+
+<!-- Works with strings -->
+<div>You have <?=$this->length($page->person_name)?> letters in your name.</div>
+
+<!-- Works with WireArray and WireArray derived objects -->
+<div>You have <?=$this->length($page->family_members)?> family members coming to dinner.</div>
+```
+
+### nth
+
+Gets the value at the nth position of an array, string, integer, float, or WireArray,
+
+```php
+<!-- Works with arrays -->
+<div>The first movie showing is: <?=$this->nth(['10:00', '12:30', '15:45'], 1)?>.</div>
+
+<!-- Nulls removed returns 15:45 -->
+<div>The second movie showing is: <?=$this->nth(['10:00', null, '15:45'], 1, true)?>.</div>
+
+<!-- Works with strings -->
+<div>The second letter in your name is: <?=$this->batch($this->nth($page->person_name, 1), 'strtoupper')?>.</div>
+
+<!-- Works with WireArray and WireArray derived objects, nulls removed with third true argument -->
+<div>True 4th item, nulls removed: <?=$this->nth($page->race_results, 3, true)->title?>.</div>
+```
+
+### nth1
+
+Gets the nth item in an array, string, integer, float, or WireArray from index beginning at 1 rather than 0
+
+See [`nth`](#nth)
+
+### odd
+
+Returns whether an integer is odd or not
+
+**Batchable**
+
+```php
+<div><?=$this->odd($page->number) ? "You're Odd" : 'Equal Slice'?></div>
 ```
 
 #### Split
@@ -326,20 +440,6 @@ Truncates a string, wrapper for `WireTextTools::truncate()` method, accepts all 
 
 ```php
 <div>Summary: <?=$this->truncate($page->description, 500)?></div>
-```
-
-#### Last
-
-Returns the last item in an array, WireArray, or last character in a string, null safe
-
-**Batchable**
-
-```php
-<!-- Works with arrays -->
-<div>The last number is: <?=$this->last([1, 2, 3, 4])?>.</div>
-
-<!-- Works with strings -->
-<div>The last letter of your name is <?=$this->last($page->person_name)?>.</div>
 ```
 
 #### Slice

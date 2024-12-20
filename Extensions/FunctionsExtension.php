@@ -29,14 +29,12 @@ declare(strict_types=1);
 
 namespace Plates\Extensions;
 
-use DateTime;
-use DateTimeImmutable;
-use DateTimeInterface;
 use InvalidArgumentException;
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
-use ProcessWire\{WireArray, WireTextTools};
+use OutOfBoundsException;
+use ProcessWire\{WireArray, WireNull, WireTextTools};
 
 use function ProcessWire\wire;
 
@@ -63,8 +61,10 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('eq', [$this, 'eq']);
         $engine->registerFunction('even', [$this, 'even']);
         $engine->registerFunction('falseToNull', [$this, 'falseToNull']);
+        $engine->registerFunction('filterWireNull', [$this, 'filterWireNull']);
         $engine->registerFunction('first', [$this, 'first']);
         $engine->registerFunction('group', [$this, 'group']);
+        $engine->registerFunction('isWireArray', [$this, 'isWireArray']);
         $engine->registerFunction('jsonDecodeArray', [$this, 'jsonDecodeArray']);
         $engine->registerFunction('last', [$this, 'last']);
         $engine->registerFunction('length', [$this, 'length']);
@@ -286,20 +286,23 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Decodes a JSON string to an array. Makes json_decode with array option batchable
+     * Decodes a JSON string to an array. Makes json_decode to array option batchable. All other
+     * arguments are transparent
      *
      * - Batchable
      *
-     * @param  string       $json         JSON String
-     * @param  bool|boolean $throwOnError Throw exception on JSON decode error
-     * @return array
-     * @throws JsonException
+     * @param  string|null  $json  json_decode PHP value
+     * @param  int          $depth json_decode PHP value
+     * @param  int          $flags json_decode PHP value
+     * @return mixed
      *
      */
-    public function jsonDecodeArray(?string $json, bool $throwOnError = false): ?array
-    {
-        return $throwOnError ? json_decode($json, true, flags: JSON_THROW_ON_ERROR)
-                             : json_decode($json, true);
+    public function jsonDecodeArray(
+        ?string $json,
+        int $depth = 512,
+        int $flags = 0
+    ): mixed {
+        return json_decode($json, true, $depth, $flags);
     }
 
     /**
@@ -383,14 +386,15 @@ class FunctionsExtension implements ExtensionInterface
 
     /**
      * Merges an arbitrary number of arrays or WireArray objects into one. Must all be of the same
-     * type. Null safe. Null values are removed, empty value returned is an array
+     * type. Null safe.
      *
      * Invalid values that cannot be merged are ignored
      *
-     * @param  array|WireArray|null $values Values to merge
+     * @param  array|WireArray $values Values to merge
      * @return array|WireArray
+     * @throws InvalidArgumentException
      */
-    public function merge(array|WireArray|null ...$values): array|WireArray
+    public function merge(array|WireArray ...$values): array|WireArray
     {
         $values = array_filter(
             $values,
@@ -413,7 +417,7 @@ class FunctionsExtension implements ExtensionInterface
             'Cannot merge collections of different types.'
         );
 
-        $type = end($types);
+        $type = $types[0];
 
         if ($type === 'array') {
             return array_merge(...$values);
@@ -440,8 +444,12 @@ class FunctionsExtension implements ExtensionInterface
      * @param  string|array|WireArray|null $value Value to get length of
      * @return int
      */
-    public function length(string|array|WireArray|null $value): int
+    public function length(string|array|WireArray|int|float|null $value): int
     {
+        is_int($value) && $value = (string) $value;
+
+        is_float($value) && $value = (string) $value;
+
         return match (true) {
             is_null($value) => 0,
             is_string($value) => strlen($value),
@@ -480,68 +488,88 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Returns the first character in string, number in int, item in array, or item in WireArray
-     * Null safe, empty or no items retrieved returns null
-     *
-     * - Batchable
-     *
-     * @param  string|array|int|WireArray|null  $value  Value to get first item of
-     * @return mixed
+     * Removes all instances of WireNull objects and returns a new WireArray. Resets indexes
+     * @param  array|WireArray $values WireArray or array to filter
+     * @return array|WireArray
      */
-    public function first(string|array|int|WireArray|null $values): mixed
+    public function filterNull(array|WireArray $values): array|WireArray
     {
-        if (!$this->length($values)) {
-            return null;
+        if (is_array($values)) {
+            $isList = array_is_list($values);
+
+            $values = array_filter($values, fn ($item) => !is_null($item));
+
+            return $isList ? array_values($values) : $values;
         }
 
-        if ($this->isWireArray($values)) {
-            return $values->first();
-        };
+        $values = array_filter(
+            $values->getArray(),
+            fn ($item) => !is_a($item, WireNull::class, true)
+        );
 
-        is_int($values) && $values = (string) $values;
-        is_string($values) && $values = str_split($values);
-
-        return $values[0];
+        return WireArray::new($values);
     }
 
     /**
-     * Returns the first character in string, number in int, item in array, or item in WireArray
-     * Null safe, empty or no items retrieved returns null
+     * Returns the first character in string, number in int, character in float, item in array, or
+     * item in WireArray. Null safe, empty or no items retrieved returns null.
      *
      * - Batchable
      *
-     * @param  string|array|int|WireArray|null  $value  Value to get last item of
-     * @return mixed
+     * @param  string|array|int|float|WireArray|null  $value  Value to get first item of
+     * @return mixed Null if empty value passed
      */
-    public function last(string|array|int|WireArray|null $values): mixed
-    {
-        if (!$this->length($values)) {
-            return null;
-        }
-
-        if ($this->isWireArray($values)) {
-            return $values->last();
-        };
-
-        is_int($values) && $values = (string) $values;
-        is_string($values) && $values = str_split($values);
-
-        return end($values);
+    public function first(
+        string|array|int|float|WireArray|null $values,
+        bool $filterNull = false
+    ): mixed {
+        return $this->nth($values, 0, $filterNull);
     }
 
     /**
-     * Get nth character in string, number in it, item in array, or item in WireArray
-     * Null safe, empty or no returnable item returns null. Out of bounds returns null
+     * Returns the last character in string, number in int, character in float, item in array, or
+     * item in WireArray. Null safe, empty or no items retrieved returns null
      *
-     * @param  string|array|int|WireArray|null  $value  Value to get nth item of
-     * @param  int                              $index  Index to return value from
+     * - Batchable
+     *
+     * @param  string|array|int|float|WireArray|null  $value      Value to get last item of
+     * @param  bool                                   $filterNull Filter null or WireNull values first
      * @return mixed
      */
-    public function nth(string|array|int|WireArray|null $values, int $index): mixed
-    {
+    public function last(
+        string|array|int|float|WireArray|null $values,
+        bool $filterNull = false
+    ): mixed {
         $length = $this->length($values);
 
         if (!$length) {
+            return null;
+        }
+
+        return $this->nth($values, $length - 1, $filterNull);
+    }
+
+    /**
+     * Get nth character in string, number in integer, value in float, item in array, or item in
+     * WireArray. Null safe, empty or no returnable item returns null. Out of bounds returns null
+     *
+     * @param  string|array|int|WireArray|float|null  $value      Value to get nth item of
+     * @param  int                                    $index      Index to return value from
+     * @param  bool                                   $filterNull Remove null WireNull values first
+     * @return mixed
+     */
+    public function nth(
+        string|array|int|float|WireArray|null $values,
+        int $index,
+        bool $filterNull = false
+    ): mixed {
+        if ($filterNull && (is_array($values) || $this->isWireArray($values))) {
+            $values = $this->filterNull($values);
+        };
+
+        $length = $this->length($values);
+
+        if (!$length || $index > $length - 1 || $index < 0) {
             return null;
         }
 
@@ -549,34 +577,50 @@ class FunctionsExtension implements ExtensionInterface
             return $values->eq($index);
         }
 
-        is_int($values) && $values = (int) $values;
+        $passedValueIsInt = is_int($values);
+        $passedValueIsFloat = is_int($values);
+
+        ($passedValueIsInt || $passedValueIsFloat) && $values = (string) $values;
+
         is_string($values) && $values = str_split($values);
 
-        if ($index > count($values) - 1) {
+        if ($index > $this->length($values) - 1) {
             return null;
         }
 
-        return $values[$index];
+        $value = $values[$index];
+
+        if (is_numeric($value)) {
+            ($passedValueIsInt || $passedValueIsFloat) && $value = (int) $value;
+        }
+
+        return $value;
     }
 
     /**
      * Retrieve item at nth place indexed from 1
      *
-     * @param  string|array|int|WireArray|null  $value  Value to get nth item of
-     * @param  int                              $index  Index to return value from
+     * @param  string|array|int|WireArray|null  $value      Value to get nth item of
+     * @param  int                              $index      Index to return value from
+     * @param  bool                             $filterNull Remove null and WireNull values first
      * @return mixed
      */
-    public function nth1(string|array|int|WireArray|null $values, int $index): mixed
-    {
-        return $this->nth($values, $index - 1);
+    public function nth1(
+        string|array|int|WireArray|null $values,
+        int $index,
+        bool $filterNull = false
+    ): mixed {
+        $realIndex = $index - 1;
+
+        return $this->nth($values, $realIndex, $filterNull);
     }
 
     /**
-     * Alias for nth that matches WireArray method
+     * Alias for nth that matches WireArray method name
      *
      * @see FunctionsExtension::nth();
      */
-    public function eq(string|array|int|WireArray|null $values, int $index): mixed
+    public function eq(string|array|int|float|WireArray|null $values, int $index): mixed
     {
         return $this->nth($values, $index);
     }
@@ -777,7 +821,6 @@ class FunctionsExtension implements ExtensionInterface
     {
         return is_a($value, WireArray::class, true);;
     }
-
 
     /**
      * Executes a simple math operation on the provided object. Null and empty strings are counted
