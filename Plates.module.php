@@ -47,6 +47,8 @@ class Plates extends WireData implements Module, ConfigurableModule
      */
     public function init()
     {
+        // CHECK IF Plates COMPOSER MODULE IS INSTALLED
+
         $this->wire->set('plates', $this);
 
         $this->wire('classLoader')->addNamespace('Plates\Extensions', __DIR__ . '/Extensions');

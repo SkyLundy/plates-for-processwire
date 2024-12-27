@@ -27,65 +27,30 @@ class CaptureExtension implements ExtensionInterface
     {
         $this->engine = $engine;
 
-        $engine->registerFunction('startCapture', [$this, 'startCapture']);
-        $engine->registerFunction('endCapture', [$this, 'endCapture']);
-        $engine->registerFunction('stopCapture', [$this, 'stopCapture']);
+        $engine->registerFunction('capture', [$this, 'getObject']);
 
-        $engine->registerFunction('startInsertCapture', [$this, 'startInsertCapture']);
-        $engine->registerFunction('stopInsertCapture', [$this, 'stopInsertCapture']);
+        $engine->registerFunction('start', [$this, 'start']);
+        $engine->registerFunction('stop', [$this, 'stop']);
+        $engine->registerFunction('end', [$this, 'end']);
 
-        $engine->registerFunction('captureTo', [$this, 'captureTo']);
+        $engine->registerFunction('to', [$this, 'to']);
 
-        $engine->registerFunction('startCaptureBlock', [$this, 'startCaptureBlock']);
-        $engine->registerFunction('stopCaptureBlock', [$this, 'stopCaptureBlock']);
+        $engine->registerFunction('startBlock', [$this, 'startBlock']);
+        $engine->registerFunction('stopBlock', [$this, 'stopBlock']);
+        $engine->registerFunction('endBlock', [$this, 'endBlock']);
     }
 
-    private $captureStarted = false;
-
-    /**
-     * Begins capturing markup
-     * A capture requires manually outputting the return value of endCapture()
-     *
-     * @return void
-     */
-    public function startCapture(): void
+    public function getObject(?string $method = null, ...$args): self
     {
-        $this->captureStarted = true;
+        if ($method && method_exists($this, $method)) {
+            $this->$method(...$args);
+        }
 
-        ob_start();
-    }
+        if ($method && str_contains($method, '::')) {
+            $this->start($method);
+        }
 
-    /**
-     * Ends capturing markup
-     * Returns the captured markup for outputting to the page or assigning to a variable
-     *
-     * @return string Captured markup
-     * @throws LogicException
-     */
-    public function endCapture(): string
-    {
-        !$this->captureStarted && throw new LogicException(
-            'A capture must be started by before it can be ended'
-        );
-
-        $this->captureStarted = false;
-
-        return ob_get_clean();
-    }
-
-    /**
-     * Ends capturing markup
-     *
-     * @return string Captured markup
-     * @throws LogicException
-     */
-    public function stopCapture(): string
-    {
-        !$this->captureStarted && throw new LogicException(
-            'A capture must be started by before it can be stopped'
-        );
-
-        return $this->endCapture();
+        return $this;
     }
 
     private ?string $insertTemplate = null;
@@ -103,7 +68,7 @@ class CaptureExtension implements ExtensionInterface
      * @return void
      * @throws LogicException
      */
-    public function startInsertCapture(string $name, array $data = []): void
+    public function start(string $name, array $data = []): void
     {
         $this->insertTemplate && throw new LogicException('You cannot nest capture inserts');
 
@@ -120,7 +85,7 @@ class CaptureExtension implements ExtensionInterface
      * @return void
      * @throws LogicException
      */
-    public function captureTo(string $name, string|int|null $value): void
+    public function to(string $name, string|int|null $value): void
     {
         !$this->insertTemplate && throw new LogicException(
             'A capture to can only be called within an insert capture'
@@ -135,7 +100,7 @@ class CaptureExtension implements ExtensionInterface
      * @return void
      * @throws LogicException
      */
-    public function startCaptureBlock(string $name): void
+    public function startBlock(string $name): void
     {
         $this->activeCapture && throw new LogicException('You cannot nest capture blocks');
 
@@ -150,7 +115,7 @@ class CaptureExtension implements ExtensionInterface
      * @return void
      * @throws LogicException
      */
-    public function stopCaptureBlock(): void
+    public function stopBlock(): void
     {
         !$this->activeCapture && throw new LogicException(
             'A capture block must be started before it can be ended'
@@ -162,11 +127,19 @@ class CaptureExtension implements ExtensionInterface
     }
 
     /**
+     * Alias for stopblock()
+     */
+    public function endBlock(): void
+    {
+        $this->stopBlock();
+    }
+
+    /**
      * Stops the insert capture and renders the selected template
      * @return void
      * @throws LogicException
      */
-    public function stopInsertCapture(): void
+    public function stop(): void
     {
         !$this->insertTemplate && throw new LogicException(
             'An capture insert must be started before it can be stopped'
@@ -184,10 +157,10 @@ class CaptureExtension implements ExtensionInterface
     }
 
     /**
-     * Alias for stopInsertCapture
+     * Alias for stop()
      */
-    public function endInsertCapture(): void
+    public function end(): void
     {
-        $this->stopInsertCapture();
+        $this->stop();
     }
 }

@@ -25,6 +25,11 @@
  *
  */
 
+/**
+ * @todo iterationDivBy
+ * @todo withIterator - Unpack to array? Convert each to stdClass with `i` property?
+ */
+
 declare(strict_types=1);
 
 namespace Plates\Extensions;
@@ -33,8 +38,9 @@ use InvalidArgumentException;
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
-use OutOfBoundsException;
+use LogicException;
 use ProcessWire\{WireArray, WireNull, WireTextTools};
+use stdClass;
 
 use function ProcessWire\wire;
 
@@ -53,16 +59,20 @@ class FunctionsExtension implements ExtensionInterface
         $this->wireTextTools = new WireTextTools();
 
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
+        $engine->registerFunction('batchEach', [$this, 'batchEach']);
         $engine->registerFunction('bit', [$this, 'bit']);
         $engine->registerFunction('clamp', [$this, 'clamp']);
         $engine->registerFunction('csv', [$this, 'csv']);
         $engine->registerFunction('difference', [$this, 'difference']);
+        $engine->registerFunction('divBy', [$this, 'divBy']);
         $engine->registerFunction('divisibleBy', [$this, 'divisibleBy']);
+        $engine->registerFunction('embedUrl', [$this, 'embedUrl']);
         $engine->registerFunction('eq', [$this, 'eq']);
         $engine->registerFunction('even', [$this, 'even']);
         $engine->registerFunction('falseToNull', [$this, 'falseToNull']);
         $engine->registerFunction('filterWireNull', [$this, 'filterWireNull']);
         $engine->registerFunction('first', [$this, 'first']);
+        $engine->registerFunction('from1', [$this, 'from1']);
         $engine->registerFunction('group', [$this, 'group']);
         $engine->registerFunction('isWireArray', [$this, 'isWireArray']);
         $engine->registerFunction('jsonDecodeArray', [$this, 'jsonDecodeArray']);
@@ -71,23 +81,22 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('merge', [$this, 'merge']);
         $engine->registerFunction('nth', [$this, 'nth']);
         $engine->registerFunction('nth1', [$this, 'nth1']);
+        $engine->registerFunction('nth1End', [$this, 'nth1End']);
+        $engine->registerFunction('nthEnd', [$this, 'nthEnd']);
+        $engine->registerFunction('toObject', [$this, 'toObject']);
         $engine->registerFunction('odd', [$this, 'odd']);
         $engine->registerFunction('product', [$this, 'product']);
-        $engine->registerFunction('randFrom', [$this, 'randFrom']);
         $engine->registerFunction('random', [$this, 'random']);
-        $engine->registerFunction('replace', [$this, 'replace']);
-        $engine->registerFunction('replaceRE', [$this, 'replaceRE']);
         $engine->registerFunction('reverse', [$this, 'reverse']);
         $engine->registerFunction('singleSpaced', [$this, 'singleSpaced']);
         $engine->registerFunction('slice', [$this, 'slice']);
-        $engine->registerFunction('split', [$this, 'split']);
         $engine->registerFunction('stripHtml', [$this, 'stripHtml']);
         $engine->registerFunction('sum', [$this, 'sum']);
-        $engine->registerFunction('trim', [$this, 'trim']);
         $engine->registerFunction('truncate', [$this, 'truncate']);
         $engine->registerFunction('unique', [$this, 'unique']);
         $engine->registerFunction('url', [$this, 'url']);
-        $engine->registerFunction('wireGetArray', [$this, 'wireGetArray']);
+        $engine->registerFunction('vimeoEmbedUrl', [$this, 'vimeoEmbedUrl']);
+        $engine->registerFunction('youTubeEmbedUrl', [$this, 'youTubeEmbedUrl']);
     }
 
     /**
@@ -95,50 +104,35 @@ class FunctionsExtension implements ExtensionInterface
      */
 
     /**
-     * Truncates a string, nullsafe
+     * Truncates a string or array of strings, safe for values that are not strings/arrays
+     *
      * A wrapper for ProcessWire's WireTextTools::truncate() method
      *
      * @see WireTextTools::truncate()
      *
-     * @param  string|null $string    String to truncate
-     * @param  int         $maxLength Length to truncate to
-     * @param  array       $options   Options, see ProcessWire object method description
-     * @return string|null
+     * @param  mixed   $value     Values to parse/truncate
+     * @param  int     $maxLength Length to truncate to
+     * @param  array   $options   Options, see ProcessWire object method description
+     * @return mixed
      */
-    public function truncate(?string $string, int $maxLength, array $options = []): ?string
+    public function truncate(mixed $value, int $maxLength, array $options = []): mixed
     {
-        if (!$string) {
-            return $string;
+        if (is_array($value)) {
+            return array_map(fn ($item) => $this->truncate($item, $maxLength, $options), $value);
         }
 
-        return $this->wireTextTools->truncate($string, $maxLength, $options);
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        return $this->wireTextTools->truncate($value, $maxLength, $options);
     }
 
     /**
-     * Splits a string by an optional delimeter and returns an array. Null safe.
-     * Returns an empty array if value is null
+     * Removes all markup from a string or array of strings, null safe. Non-string values are
+     * returned as passed
      *
-     * - Batchable
-     *
-     * @param  string $value     String to split
-     * @param  string $separator Value to split by
-     * @return array
-     */
-    public function split(?string $value, ?string $separator = null): array
-    {
-        if (is_null($value)) {
-            return [];
-        }
-
-        return match (true) {
-            !!$separator => explode($separator, $value),
-            default => str_split($value),
-        };
-    }
-
-    /**
-     * Removes all markup from a string, provides ProcessWire markup to text sanitizer, null safe.
-     * Integers are ignored
+     * @see WireTextTools::markupToText()
      *
      * - Batchable
      *
@@ -146,17 +140,15 @@ class FunctionsExtension implements ExtensionInterface
      * @param  bool        $recursive Recursively strip HTML from strings in nested arrays
      * @return string|null
      */
-    public function stripHtml(string|int|null $value = null): string|int|null
+    public function stripHtml(mixed $value = null, array $options = []): mixed
     {
-        if (is_null($value)) {
-            return '';
+        $recursive = $options['recursive'] ?? false;
+
+        if (is_array($value) && $recursive) {
+            return array_map(fn ($item) => $this->stripHtml($item, $options), $value);
         }
 
-        if (is_int($value)) {
-            return $value;
-        }
-
-        return wire('sanitizer')->markupToText($value ?? '');
+        return is_string($value) ? wire('sanitizer')->markupToText($value, $options) : $value;
     }
 
     /**
@@ -172,6 +164,95 @@ class FunctionsExtension implements ExtensionInterface
     public function visibleLength(?string $value): int
     {
         return $value ? $this->wireTextTools->getVisibleLength($value) : 0;
+    }
+
+    /**
+     * Parses a YouTube or Vimeo video URL in any format and returns a URL that can be used with an
+     * video embed iframe. Returns fallback or null if a falsey value is passed or embed URL cannot
+     * be created
+     *
+     * @param  string|null $value      URL to parse
+     * @param  array       $parameters Parameters appended to the embed URL
+     * @return string|null
+     */
+    public function embedUrl(?string $url, array $parameters = []): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        $url = trim($url);
+        $url = html_entity_decode($url);
+
+        return match (true) {
+            str_contains($url, 'vimeo') => $this->vimeoEmbedUrl($url, $parameters),
+            str_contains($url, 'youtu') => $this->youTubeEmbedUrl($url, $parameters),
+            default => null,
+        };
+    }
+
+    /**
+     * Parses a Vimeo video URL and returns an iframe embed-ready URL. Returns null if URL passed is
+     * falsey or if URL is not a vimeo URL
+     *
+     * @param  string|null $url       Vimeo URL
+     * @param  array       $parameters Parameters appended to the embed URL
+     * @return string|null
+     */
+    public function vimeoEmbedUrl(?string $url, array $parameters = []): ?string
+    {
+        if (!$url || !filter_var($url, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        $url = html_entity_decode($url);
+
+        $urlComponents = parse_url($url);
+
+        $urlPath = $urlComponents['path'] ?? '';
+
+        if (!$urlPath) {
+            return null;
+        }
+
+        $videoId = preg_replace('/[^0-9]/', '', $urlPath);
+
+        if (!$videoId) {
+            return null;
+        }
+
+        return $this->url("https://player.vimeo.com/video/{$videoId}", $parameters);
+
+        // https://player.vimeo.com/video/{$videoId}?badge=0&autopause=0&player_id=0&autoplay=1
+    }
+
+    /**
+     * Parses a YouTube video URL and returns an iframe embed-ready URL. Returns null if URL passed is
+     * falsey or if URL is not a vimeo URL
+     *
+     * @param  string|null $url        YouTube URL
+     * @param  array       $parameters Parameters appended to the embed URL
+     * @return string|null
+     */
+    public function youTubeEmbedUrl(?string $url, array $parameters = []): ?string
+    {
+        if (!$url || !filter_var($url, FILTER_VALIDATE_URL)) {
+            return null;
+        }
+
+        $url = html_entity_decode($url);
+
+        preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})%', $url, $matches);
+
+        if (count($matches) !== 2) {
+            return null;
+        }
+
+        $videoId = end($matches);
+
+        return $this->url("https://www.youtube.com/embed/{$videoId}", $parameters);
+
+        // https://www.youtube.com/embed/{$videoId}?autoplay=1&playsinline=1
     }
 
     /**
@@ -240,6 +321,16 @@ class FunctionsExtension implements ExtensionInterface
         }
 
         return $value % $by === 0;
+    }
+
+    /**
+     * Alias for divisibleBy()
+     *
+     * @see FunctionsExtension::divisibleBy()
+     */
+    public function divBy(int|float|null $value, int|float|null $by): bool
+    {
+        return $this->divisibleBy($value, $by);
     }
 
     /**
@@ -319,25 +410,39 @@ class FunctionsExtension implements ExtensionInterface
      * @param  string $functions Pipe separated function names
      * @return array
      */
-    public function batchArray(array $values, string $functions): array
+    public function batchEach(array $values, string $functions): array
     {
         $functions = explode('|', $functions);
 
-        foreach ($functions as $function) {
-            $values = array_map(function($item) use ($function) {
-                if (method_exists($this, $function)) {
-                    return $this->$function($item);
+        // Lovingly borrowed from Plates core
+        // @see League\Plates\Template::batch()
+        $batch = function($var) use ($functions): mixed {
+            foreach ($functions as $function) {
+                if ($this->engine->doesFunctionExist($function)) {
+                    $var = call_user_func(array($this, $function), $var);
+                } elseif (is_callable($function)) {
+                    $var = call_user_func($function, $var);
+                } else {
+                    throw new LogicException(
+                        'The batch function could not find the "' . $function . '" function.'
+                    );
                 }
+            }
 
-                if (function_exists($function)) {
-                    return $function($item);
-                }
+            return $var;
+        };
 
-                return $item;
-            }, $values);
-        }
+        return array_map(fn ($item) => $batch($item), $values);
+    }
 
-        return $values;
+    /**
+     * Alias for batchEach()
+     *
+     * @see FunctionsExtension::batchEach()
+     */
+    public function batchArray(array $values, string $functions): array
+    {
+        return $this->batchEach($values, $functions);
     }
 
     /**
@@ -359,29 +464,23 @@ class FunctionsExtension implements ExtensionInterface
         return implode(', ', $values);
     }
 
-
     /**
-     * Converts a WireArray to an array, optionally recursive
+     * Re-indexes an iterable from 1
      *
-     * @param  WireArray    $wireArray WireArray object to convert
-     * @param  bool|boolean $recursive Optionally execute on nested WireArray and WireArray derived objects
+     * @param  iterable $iterable Array or WireArray
      * @return array
      */
-    public function wireGetArray(WireArray $wireArray, bool $recursive = false): array
+    public function from1(iterable $iterable): array
     {
-        $array = $wireArray->getArray();
+        $indexes = range(1, $this->length($iterable));
 
-        if (!$recursive) {
-            return $array;
+        if ($this->isWireArray($iterable)) {
+            $iterable = $iterable->getArray();
         }
 
-        return array_map(function($item) {
-            if ($this->isWireArray($item)) {
-                return $this->wireGetArray($item, true);
-            }
+        $values = array_values($iterable);
 
-            return $item;
-        }, $array);
+        return array_combine($indexes, $values);
     }
 
     /**
@@ -431,6 +530,32 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
+     * Converts associative arrays to stdClass objects recursively. Changes method of accessing
+     * values from an array [] notation to a fluent -> notation as stdClass objects
+     *
+     * List arrays are not converted to objects
+     *
+     * @param  array  $value List array or mutlidimensional array
+     * @return array|stdClass
+     */
+    public function toObject(mixed $value): mixed
+    {
+        if (!is_array($value)) {
+            return $value;
+        }
+
+        $array = array_map(function($item) {
+            if (!is_array($item)) {
+                return $item;
+            }
+
+            return $this->toObject($item);
+        }, $value);
+
+        return array_is_list($array) ? $array : (object) $array;
+    }
+
+    /**
      * Arrays/WireArrays/Strings
      *
      * Assistants that work with either arrays or arrays and strings
@@ -459,32 +584,30 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Returns a random item from an array or WireArray, random character if a string, random number
-     * if integer. Returns null if value empty. Null safe
+     * Returns a random item from a string, integer, float,  array or WireArray, random character if
+     * a string, random number if integer. Returns null if value empty. Null safe
      *
      * - Batchable
      *
-     * @param  WireArray|string|array|null   $value A string or arrayable item to source the random value
+     * @param  WireArray|string|int|float|array|null $value Source the random value
+     * @param  bool                                  $filterNulls
      * @return mixed
      */
-    public function random(WireArray|string|array|int|null $value): mixed
-    {
-        if (!$this->length($value)) {
+    public function random(
+        WireArray|string|array|int|float|null $values,
+        bool $filterNulls = false,
+    ): mixed {
+        if ($filterNulls && (is_array($values) || $this->isWireArray($values))) {
+            $values = $this->filterNull($values);
+        }
+
+        $length = $this->length($values);
+
+        if (!$length) {
             return null;
         }
 
-        if ($this->isWireArray($value)) {
-            return $value->random();
-        }
-
-        $type = gettype($value);
-        $value = (string) $value;
-
-        is_string($value) && $values = str_split($value);
-
-        $randomValue = $values[array_rand($values)];
-
-        return $type === 'integer' ? (int) $randomValue : $randomValue;
+        return $this->nth($values, rand(0, $length - 1), $filterNulls);
     }
 
     /**
@@ -578,7 +701,7 @@ class FunctionsExtension implements ExtensionInterface
         }
 
         $passedValueIsInt = is_int($values);
-        $passedValueIsFloat = is_int($values);
+        $passedValueIsFloat = is_float($values);
 
         ($passedValueIsInt || $passedValueIsFloat) && $values = (string) $values;
 
@@ -606,23 +729,57 @@ class FunctionsExtension implements ExtensionInterface
      * @return mixed
      */
     public function nth1(
-        string|array|int|WireArray|null $values,
+        string|array|int|float|WireArray|null $values,
         int $index,
         bool $filterNull = false
     ): mixed {
-        $realIndex = $index - 1;
-
-        return $this->nth($values, $realIndex, $filterNull);
+        return $this->nth($values, $index - 1, $filterNull);
     }
 
     /**
-     * Alias for nth that matches WireArray method name
+     * Retrieve item at nth place from the end indexed from 0
      *
-     * @see FunctionsExtension::nth();
+     * @param  string|array|int|WireArray|null  $value      Value to get nth item of
+     * @param  int                              $index      Index from the end to return value from
+     * @param  bool                             $filterNull Remove null and WireNull values first
+     * @return mixed
      */
-    public function eq(string|array|int|float|WireArray|null $values, int $index): mixed
+    public function nthEnd(
+        string|array|int|float|WireArray|null $values,
+        int $index,
+        bool $filterNull = false
+    ): mixed {
+        return $this->nth($this->reverse($values), $index, $filterNull);
+    }
+
+    /**
+     * Retrieve item at nth place from the end indexed from 1
+     *
+     * @param  string|array|int|WireArray|null  $value      Value to get nth item of
+     * @param  int                              $index      Index from the end to return value from
+     * @param  bool                             $filterNull Remove null and WireNull values first
+     * @return mixed
+     */
+    public function nth1End(
+        string|array|int|float|WireArray|null $values,
+        int $index,
+        bool $filterNull = false
+    ): mixed {
+        return $this->nth($this->reverse($values), $index - 1, $filterNull);
+    }
+
+    /**
+     * Equals. Compares first value to second value, returns boolean. Weak comparison by default,
+     * strict comparison optional
+     *
+     * @param mixed $value1 First value to compare
+     * @param mixed $value2 Second value to compare
+     * @param bool  $strict Compare values using strict operator
+     * @return bool
+     */
+    public function eq(mixed $value1, mixed $value2, bool $strict = false): bool
     {
-        return $this->nth($values, $index);
+        return $strict ? $value1 === $value2 : $value1 == $value2;
     }
 
     /**
@@ -733,15 +890,25 @@ class FunctionsExtension implements ExtensionInterface
      * @return array
      */
     public function slice(
-        string|array|WireArray|null $value,
+        string|array|int|float|WireArray|null $value,
         int $start,
         ?int $length = null
-    ): array|WireArray|string {
-        return match (true) {
+    ): array|WireArray|int|float|string|null {
+        if (is_null($value)) {
+            return null;
+        }
+
+        $type = gettype($value);
+
+        ($type === 'double' || $type === 'integer') && $value = (string) $value;
+
+        $result = match (true) {
             is_string($value) => $this->wireTextTools->substr($value, $start, $length),
             $this->isWireArray($value) => $value->slice($start, $length),
             default => array_slice($value, $start, $length),
         };
+
+        return $result;
     }
 
     /**
@@ -752,16 +919,18 @@ class FunctionsExtension implements ExtensionInterface
      * Summable values may be any value that is_numeric. Integers, floats, numeric strings
      *
      * @param array|WireArray|null $values
-     * @param string|int|null $property Index or property when summing arrays/objects
+     * @param string`|int|null $property Index or property when summing arrays/objects
      */
-    public function sum(array|WireArray|null $values, string|int|null $property = null): int|float
-    {
+    public function sum(
+        array|WireArray|null $values,
+        string|int|null $property = null
+    ): int|float {
         return $this->mathsOperation('sum', $values, $property);
     }
 
     /**
-     * Subtracts all of the values in an array, list array by index, associative array by key, array of
-     * stdClass objects by property, or a WireArray by property. Null safe.
+     * Subtracts all of the values in an array, list array by index, associative array by key, array
+     * of stdClass objects by property, or a WireArray by property. Null safe.
      *
      * Empty strings and null values are equivalent of zero.
      * Summable values may be any value that is_numeric. Integers, floats, numeric strings
@@ -769,14 +938,16 @@ class FunctionsExtension implements ExtensionInterface
      * @param array|WireArray|null $values
      * @param string|int|null $property Index or property when summing arrays/objects
      */
-    public function difference(array|WireArray|null $values, string|int|null $property = null): int|float
-    {
+    public function difference(
+        array|WireArray|null $values,
+        string|int|null $property = null
+    ): int|float {
         return $this->mathsOperation('difference', $values, $property);
     }
 
     /**
-     * Adds all of the values in an array, list array by index, associative array by key, array of
-     * stdClass objects by property, or a WireArray by property. Null safe.
+     * Multiplies all of the values in an array, list array by index, associative array by key,
+     * or a WireArray by property. Null safe.
      *
      * Empty strings and null values are equivalent of zero.
      * Summable values may be any value that is_numeric. Integers, floats, numeric strings
@@ -784,8 +955,10 @@ class FunctionsExtension implements ExtensionInterface
      * @param array|WireArray|null $values
      * @param string|int|null $property Index or property when summing arrays/objects
      */
-    public function product(array|WireArray|null $values, string|int|null $property = null): int|float
-    {
+    public function product(
+        array|stdClass|WireArray|null $values,
+        string|int|null $property = null
+    ): int|float {
         return $this->mathsOperation('product', $values, $property);
     }
 
@@ -833,7 +1006,7 @@ class FunctionsExtension implements ExtensionInterface
      */
     private function mathsOperation(
         string $operation,
-        array|WireArray|null $values,
+        array|stdClass|WireArray|null $values,
         string|int|null $property = null
     ): int|float {
         if (is_null($values)) {
@@ -867,6 +1040,18 @@ class FunctionsExtension implements ExtensionInterface
             }
 
             $valueType = gettype($value);
+
+            if ($valueType === 'object' && !property_exists($value, $property)) {
+                throw new LogicException(
+                    "Unable to get {$operation}. Property '{$property}' does not exist"
+                );
+            }
+
+            if ($valueType === 'array' && !array_key_exists($property, $value)) {
+                throw new LogicException(
+                    "Unable to get {$operation}. Array key '{$property}' does not exist"
+                );
+            }
 
             return match ($valueType) {
                 'object' => $value->$property,

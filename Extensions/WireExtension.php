@@ -40,13 +40,11 @@ class WireExtension implements ExtensionInterface
      * Assistant for instantiating a WireRandom object
      * @return WireRandom
      */
-    public function wireRandom(): WireRandom
+    public function wireRandom(?string $method = null): mixed
     {
-        if ($this->wireRandom) {
-            return $this->wireRandom;
-        }
+        $this->wireRandom = $this->wireRandom ??  new WireRandom();
 
-        return $this->wireRandom =  new WireRandom();
+        return $method ? $this->wireRandom->{$method}() : $this->wireRandom;
     }
 
     /**

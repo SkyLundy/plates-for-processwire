@@ -22,37 +22,6 @@ From the [documentation]():
 
 There are many templating languages to choose from, some already have ProcessWire modules to make integration easy. They work for many people, and that's great. What they may be lacking in is the core PHP-first approach that ProcessWire provides developers. Plates provides powerful yet simple tools that feel more at home with ProcessWire than any other templating engine. Whether you've worked with templating engines in the past or not, with or without ProcessWire, you'll be up to speed incredibly fast.
 
-### Syntax?
-
-None. There are no special language constructs or changes to how you write code. No `{{ double_braces }}`  `{$braceWraps}`, just `<?=$var?>`. There's no syntax-specific interpreter to work around, just PHP.
-
-Is it more verbose? a little. If you're choosing a templating language because you want to avoid native shorthand PHP echo tags, then this may not be for you. If you want an _incredibly_ lightweight solution with native-feeling layouts, partials, templates, code reuse, chainable functions, and can work with [PHP's built-in alternative control structure syntax](https://www.php.net/manual/en/control-structures.alternative-syntax.php), then Plates is highly worth considering.
-
-The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).
-
-### A note on escaping strings
-
-Escaping values is extremely important for safety in applications developed in a bare framework like Laravel, CakePHP, Nette, etc.
-
-But ProcessWire isn't a bare framework, it's a _content management framework_ native to storing and outputting content safely by default. Unless you turn HTML Entitiy formatting off intentionally for fields, and usually that's done with purpose, you don't have to worry about escaping values returned by ProcessWire.
-
-A good contrast is the [Latte](https://latte.nette.org/) templating engine which forces escaping all values and can't be globally disabled. Unless you include the `|noescape` filter, this string will be double escaped and encoded characters that should not be present on the page may be rendered. Unless you remove the entity encoder Text formatter for each field in ProcessWire, you'll have to add this to every text variable output to the page.
-```php
-<title>{$page->title|noescape}</title>
-```
-
-With ProcessWire and Plates:
-```php
-<title><?=$page->title?></title>
-```
-
-So to re-answer the question "is it more verbose?"… maybe not after all.
-
-If you do need to escape a value, Plates makes it easy:
-```php
-<title><?=$this->e($page->your_field)?></title>
-```
-
 ## Requirements & Usage
 
 Plates For ProcessWire was created to provide access to Plates in a way that feels native to use with ProcessWire. It is a lightweight wrapper that preloads the ProcessWire API with Plates to make all ProcessWire objects like `$page`, `$config`, `$user`, etc. ready out of the box.
@@ -139,6 +108,10 @@ As mentioned, the entire ProcessWire API is made available to all Plates files s
 
 ### That's it. You're ready to use Plates in your ProcessWire projects
 
+Plates for ProcessWire also comes with additional tools you can use in your projects via extensions included with this module. [Read about them here](#plates-for-processwire-extensions).
+
+---
+
 ### Accessing the Plates Template object outside of a Plates template
 
 In Plates template files, like `home.view.php` above, the file is rendered by Plates and so exists within the `Template` plates object. Any Plates template file output _inside_ the `$plates->templates->render()` method is a Plates `Template` object. This includes views, layouts, components, etc.
@@ -192,15 +165,87 @@ $plates->templates->loadExtension(new MyCustomPlatesExtension());
 
 ## Plates for ProcessWire Extensions
 
-Plates for ProcessWire comes pre-packed with extentions that you can optionally add to your project should you want to. These extensions were created specifically for this module and provide a lot of useful tools that complement ProcessWire's objects and API. Each extension can be included when configuring the module.
+Plates for ProcessWire comes pre-packed with extentions that you can optionally add to your project should you want to. These extensions were created specifically for this module and provide a lot of useful tools that complement ProcessWire's objects and API. Each extension can be enabled when configuring the module.
 
-The Plates for ProcessWire extensions include:
+For full documentation, review the `Extensions.md` file included with this repository.
 
-### Functions Extension
+## Syntax and Usage Tips
 
-This extension introduces a significant number of functions that make formatting and working with data in your templates easier. Many are ready to work with ProcessWire objects so you can execute the same functions on strings, arrays, WireArrays, and WireArray derived objects for a native developer experience. These functions are intended to bring in some of
+There are no special language constructs or changes to how you write code. No `{{ double_braces }}`  `{$braceWraps}`, just `<?=$var?>`. There's no interpreter layer, just PHP.
 
-## Tips for tidy templates
+Is it more verbose? A little. If you're choosing a templating language because you want to avoid native shorthand PHP echo tags, then this may not be for you. If you want an _incredibly_ lightweight solution with native-feeling layouts, partials, templates, code reuse, chainable functions, and can work with [PHP's built-in alternative control structure syntax](https://www.php.net/manual/en/control-structures.alternative-syntax.php), then Plates is worth considering.
+
+The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).
+
+Concise syntax is something that templating engines use to contrast their approach to writing templates vs standard PHP. [Smarty](https://www.smarty.net/syntax_comparison) makes this comparison between its syntax and pure PHP.  The example variable has been changed to better reflect usage with ProcessWire.
+
+**PHP**
+
+```php
+<?php echo htmlspecialchars(strtolower($page->foo),ENT_QUOTES,'UTF-8'); ?>
+```
+
+**Smarty**
+
+```php
+{$page->foo|lower|escape}
+```
+
+**Plates**
+
+```php
+<?=$this->e($page->foo, 'strtolower')?>
+```
+
+In Plates, `e()` is the [escape](https://platesphp.com/templates/escaping/) function. As noted below, this is redundant and unnecessary in ProcessWire unless you're outputting values from an unsafe source. In almost every scenario, this is safe to use:
+
+```php
+<?=strtolower($page->foo)?>
+```
+
+### A note on escaping strings
+
+Escaping values is extremely important for safety in applications developed in a bare framework like Laravel, CakePHP, Nette, etc.
+
+But ProcessWire isn't a bare framework, it's a _content management framework_ native to storing and outputting content safely by default. Unless you turn HTML Entitiy formatting off intentionally for fields, and usually that's done with purpose (like intentionally outputting markup/code to a page), you don't have to worry about escaping field values.
+
+A good contrast is the [Latte](https://latte.nette.org/) templating engine which forces escaping all values and can't be globally disabled. Unless you include the `|noescape` filter, field balues will be double escaped and encoded characters that should not be present on the page may be rendered. Unless you remove the entity encoder Text formatter for each field in ProcessWire, you'll have to add this to every text variable output to the page.
+
+```php
+<title>{$page->title|noescape}</title>
+```
+
+With ProcessWire and Plates:
+
+```php
+<title><?=$page->title?></title>
+```
+
+So to re-answer the question "is it more verbose?"… maybe not after all.
+
+If you do need to escape a value, as mentioned above, Plates makes it easy:
+```php
+<title><?=$this->e($page->your_field)?></title>
+```
+
+### Short tags?
+
+There may be some confusion about the use of "short tags" and templating engines like Smarty [recommend that you don't use them](https://www.smarty.net/syntax_comparison), primarily as an argument for using Smarty. However the statement is slightly misleading. Here's what short tags are and aren't:
+
+A short tag opens a PHP document or statement with `<?`
+```php
+<? echo $variable ?>
+```
+
+A shorthand echo statement outputs a value
+
+```php
+<?=$variable?>
+```
+
+Short tag use is not recommended as they can be disabled in any `php.ini` configuration. This is the widely accepted compatability concern and PHP documentation itself states they not be used. If short tags are disabled the shorthand echo statement is not affected. PHP considers `<?php ?>` and `<?= ?>` to be equally normal tags and [recommends their use exclusively](https://www.php.net/manual/en/language.basic-syntax.phptags.php).
+
+### Tips for tidy templates
 
 There are many native language constructs in PHP that can clean up your templating further, no syntactic sugar required. Employing these makes for cleaner and easier to read templates.
 

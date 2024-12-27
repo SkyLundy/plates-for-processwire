@@ -2,23 +2,116 @@
 
 Plates for ProcessWire comes with custom extensions pre-built for use in your Plates template files. These extensions are optional and can be enabled when configuring the module. These extensions are purely provided as quality-of-life additions and are not necessary to use Plates in your ProcessWire project.
 
+If bugs are encountered, please open an issue on the Plates for ProcessWire Github repository. If you're able to provide a bugfix, merge requests are very much welcome.
+
 ---
 
 ## Conditionals Extension
 
-Helper methods that supplement the [alternate control structures](The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).) provided by PHP that are useful when rendering markup. Many of these are influenced by [Latte Tags](https://latte.nette.org/en/tags).
+Helper methods that supplement the [alternate control structures](The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).) provided by PHP useful when rendering markup. 
 
-### Switch
+### attrIf
 
-Outputs value in an array where key matches the first argument passed
+Outputs an attribute if conditional is truthy. Second argument is the attribute. Optional third argument is the attribute value.
+
+Note that the space before the opening `<?=` is ommitted. Attributes are automatically padded with a leading space to prevent empty spaces in markup if the attribute is not added at runtime
 
 ```php
-<div class="<?=$this->switch($page->color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'])?>">
+<!-- Two arguments -->
+<button type="submit"<?=$this->attrIf($form->errors, 'disabled')?>>
+    Submit Form
+</button>
+
+<!-- Three arguments -->
+<div<?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_values)>
+</div>
+```
+
+### classIf
+
+Shorthand for conditional attribute, but assumes class. Can be used with one or both values
+
+Note that the space before the opening `<?=` is ommitted. Attributes are automatically padded with a leading space to prevent empty spaces in markup if the attribute is not added at runtime
+
+```php
+<button type="submit"<?=$this->classIf($errors, 'border-2 border-red-500', 'bg-blue-200')?>>
+    Submit Form
+</button>
+```
+
+### if
+
+Outputs value if first argument is truthy. Useful for a single line one comparison/value where the value being evaluated is never output to the page. Optional second value to return on false. Weakly compares values. More complex cases should use native PHP language features, [`match`](#match), or [`matchTrue`](#matchTrue)
+
+Arguments and values returned may be of any type.
+
+```php
+<!-- Will output 'your order is ready' if `$orderReady` is true, $orderReady is never output to the page -->
+<p>Hello, <?=$this->if($orderReady, 'your order is ready')?></p>
+
+<!-- With optional third argument -->
+<p>Hello, <?=$this->if($orderReady, 'your order is ready', 'please complete checkout')?></p>
+
+<!-- Native PHP alternatives -->
+
+<!-- If a third argument is being passed, consider a ternary -->
+<p>Hello, <?=$orderReady ? 'your order is ready' : 'please complete checkout')?></p>
+
+<!-- If the first argument may contain an output value, or may be empty, consider the elvis operator -->
+<p>Hello, <?=$shippingStatus ?: 'your order is still being processed')?></p>
+
+<!-- If the first argument is an output value that may be null or not present in an array, consider the null coalescing operator -->
+<p>Hello, <?=$order['shippingStatus'] ?? 'your order is still being processed')?></p>
+
+<!-- If the first argument may be an object or null, consider the null safe operator -->
+<p>Hello, <?=$order?->shippingStatus ?? 'your order is still being processed')?></p>
+
+<!-- If the first argument may be an object or null but required a method call, consider the null safe operator -->
+<p>Hello, <?=$order?->shippingMessage() ?? 'your order is still being processed')?></p>
+```
+
+### ifEq
+
+Outputs value if first argument is true compared to second argument. Optional fourth boolean argument for strict/weak comparison. Default is strict.
+
+Arguments and values returned may be of any type
+
+```php
+<label>
+    <span class="form-label">Name</span>
+    <?=$this->ifEq($errors['name'], 'required', '<span class="form-label">This field is required</span>')?>
+    <input type="text" class="required">
+</label>
+```
+
+### match
+
+Outputs value in an array of cases where key matches the first argument passed. Optional third argument for default case
+
+```php
+<div class="<?=$this->match($color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'])?>">
+    Hello!
+</div>
+
+<!-- With default -->
+<div class="<?=$this->match($color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'], 'bg-blue-500')?>">
     Hello!
 </div>
 ```
 
-### Conditional Tag
+### matchTrue
+
+Returns a value based on a provided evaluation. Similar to match but can handle more complex cases.
+
+```php
+<p>Your account is <?=$this->matchTrue(['current', $daysUntilDue >= 1, 'due' => $daysUntilDue == 0, 'past due' => $daysUntilDue < 0])?></p>
+```
+
+### switch
+
+Alias for [`match`](#match )
+
+### tagIf
 
 Outputs one of two tags depending on the truthiness of the first argument
 
@@ -26,58 +119,44 @@ Outputs one of two tags depending on the truthiness of the first argument
 <<?=$this->tagIf($page->headline, 'h3', 'h2'?> class="text-neutral-500">
     <?=$page->text?>
 </<?=$this->ifTag()?>>
-```
 
-### Conditional Attribute
-
-Outputs an attribute if conditional is truthy. Second argument is the attribute. Optional third argument is the attribute value.
-
-```php
-<!-- Two arguments -->
-<button type="submit" <?=$this->attrIf($form->errors, 'disabled')?>>
-    Submit Form
-</button>
-
-<!-- Three arguments -->
-<div <?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_values)>
-</div>
-```
-
-### Conditional Class Attribute
-
-Shorthand for conditional attribute, but assumes class. Can be used with one or both values
-
-```php
-<button type="submit" <?=$this->classIf($form->errors, 'border-2 border-red-500', 'bg-blue-200')?>>
-    Submit Form
-</button>
+<!-- May optionally close with tagIf when no arguments are passed -->
+<<?=$this->tagIf($page->headline, 'h3', 'h2'?> class="text-neutral-500">
+    <?=$page->text?>
+</<?=$this->tagIf()?>>
 ```
 
 ---
 
 ## Functions Extension
 
-The Functions Extension provides an selection of helper functions to make working with values easier. It is also built for ProcessWire specifically. Functions that accept arrays also accept WireArray and WireArray derived objects. While WireArray objects may have similar methods, these are chainable with `$this->batch()` and work whether WireArray or array is passed to make working with different object types easier.
+The Functions Extension provides a selection of helper functions to make working with values in templates easier. It is also built for ProcessWire specifically. Functions that accept arrays generally accept WireArray and WireArray derived objects. Where WireArray objects may have similar methods, these are chainable with `$this->batch()` and work whether WireArray or array is passed to make working with different object types easier and more uniform.
 
-The philosophy behind this extension is that, as with Plates itself, native PHP functions are preferred. Unless a signifivant improvement can be made or use case satisfied, there's not really a need to implements a replication. This extension won't implement a `capitalize()` function when `ucfirst()` already exists and can be batched. Additionally, this extension avoids implementing functions that take closures for arguments and instead focuses on formatting, conversion, casting, and sorting.
+The philosophy behind this extension is that, as with Plates itself, native PHP functions are preferred. Unless a signifivant improvement can be made or use case satisfied, there's not really a need to implement a replication. This extension won't implement a `capitalize()` function when `ucfirst()` already exists and can be batched. Additionally, this extension does not implement functions that take closures as arguments and instead focuses on formatting, conversion, casting, sorting, and working with data structures in template context.
 
-Many of these functions are influenced by [Latte Filters](https://latte.nette.org/en/filters). Any function that accepts one argument can be chained using the `$this->batch()` method call. If functions accept more than one argument but may still execute when only one argument is passed, it can still be batched. This applies to both standard PHP functions as well as any custom extension functions.
+Many of these functions are influenced by [Latte Filters](https://latte.nette.org/en/filters). Any function that accepts one argument can be chained using the `$this->batch()` method call. If a function accepts more than one argument but additional arguments are optional, it can still be batched. This applies to both standard PHP functions as well as any custom extension functions.
 
 Most functions are null safe where possible and impressive batchable chains can be created using combinations of these functions and native PHP functions.
 
 ### batchArray
 
+Alias for [`batchEach`](#batcheach)
+
+### batchEach
+
 Extends Plates' `batch()` method to each item in an array
 
 ```php
-<?php foreach ($this->batchArray(['hello THERE', ' <div>how are you?</div>'], 'stripHtml|strtolower|ucfirst') as $text): ?>
+<?php foreach ($this->batchEach(['hello THERE', ' <div>how are you?</div>'], 'stripHtml|trim|strtolower|ucfirst') as $text): ?>
     <p><?=$text?></p>
 <?php endforeach ?>
 
 <!-- Process large numbers of field values easily -->
-<?php foreach ($this->batchArray($activities->explode('summary'), 'stripHtml|ucfirst') as $text): ?>
-    <p><?=$text?></p>
-<?php endforeach ?>
+<ul>
+  <?php foreach ($this->batchEach($movies->explode('title'), 'stripHtml|trim|strtolower|ucwords') as $title): ?>
+    <li><?=$title?></li>
+  <?php endforeach ?>
+</ul>
 ```
 
 ### bit
@@ -96,7 +175,7 @@ Useful when `true` or `false` needs to be output in some way to the page where `
        }
      "
 >
-    <div id="google-map"></div>
+  <div id="google-map"></div>
 </div>
 ```
 
@@ -138,12 +217,12 @@ Returns whether a number can be divided by another
 
 ```php
 <ul class="grid gap-2 <?=$this->divisibleBy($page->books->count(), 3) ? 'grid-cols-3' : 'grid-cols-2'?>">
-<?php foreach ($page->books as $book):?>
+  <?php foreach ($page->books as $book):?>
     <li>
-        <p><?=$book->title?></p>
-        <p><?=$book->author?></p>
+	  <p><?=$book->title?></p>
+      <p><?=$book->author?></p>
     </li>
-<?php endforeach?>
+  <?php endforeach?>
 </ul>
 ```
 
@@ -158,7 +237,7 @@ Returns whether a number is even or not
 **Batchable**
 
 ```php
-<div><?=$this->even($page->number) ? 'Even Steven' : 'Odd Man Out'?></div>
+<p><?=$this->even($page->number) ? 'Even Steven' : 'Odd Man Out'?></p>
 ```
 
 ### falseToNull
@@ -174,6 +253,8 @@ Converts a value of `false` to `null`, all other values return original value
 ### filterNull
 
 Removes all instances of null from an array or WireNull objects from WireArray and WireArray derived objects. Returns a new array or WireArray instance. Useful for reducing the need for secondary checking for `id` before outputting when working with WireArrays.
+
+**Batchable**
 
 ```php
 <ul>
@@ -192,17 +273,19 @@ Returns the first item in an array, WireArray, first character in a string, or f
 
 Optional second boolean argument will remove all null or WireNull items from the array before getting the first item.
 
+Alias for `nth` function index at 0. See [`nth`](#nth) for type handling and examples of working with nth values
+
 **Batchable**
 
 ```php
 <!-- Works with arrays -->
-<div>The first movie showing is: <?=$this->first(['10:00', '12:30', '15:45'])?>.</div>
+<p>The first movie showing is: <?=$this->first(['10:00', '12:30', '15:45'])?>.</p>
 
 <!-- Works with strings -->
-<div>Your name starts with the letter <?=$this->batch($this->first($page->person_name), 'strtoupper')?>.</div>
+<p>Your name starts with the letter <?=$this->batch($this->first($page->person_name), 'strtoupper')?>.</p>
 
 <!-- Works with WireArray and WireArray derived objects -->
-<div>True first item, nulls removed: <?=$this->first($page->race_results, true)->title?>.</div>
+<p>True first item, nulls removed: <?=$this->first($page->race_results, true)->title?>.</p>
 ```
 
 ### group
@@ -222,38 +305,38 @@ $people = [
 ];
 -->
 <?php foreach ($this->group($people, 'age') as $age => $persons): ?>
-    <div>
-        <p>Age: <?=$age?></p>
-        <ul>
-            <?php foreach ($persons as $person): ?>
-                <li><?=$person['name']?></li>
-            <?php endforeach ?>
-        </ul>
-    </div>
+  <div>
+    <p>Age: <?= $age ?></p>
+    <ul>
+      <?php foreach ($persons as $person): ?>
+        <li><?= $person['name'] ?></li>
+      <?php endforeach ?>
+    </ul>
+  </div>
 <?php endforeach ?>
 
 <!-- Pass true/'asc'/'desc' as the third argument to sort by group keys -->
 <?php foreach ($this->group($people, 'age', 'asc') as $age => $persons): ?>
-    <div>
-        <p>Age: <?=$age?></p>
-        <ul>
-            <?php foreach ($persons as $person): ?>
-                <li><?=$this->batch($person['name'], 'trim|strtolower|ucfirst')?></li>
-            <?php endforeach ?>
-        </ul>
-    </div>
+  <div>
+    <p>Age: <?= $age ?></p>
+    <ul>
+      <?php foreach ($persons as $person): ?>
+        <li><?= $this->batch($person['name'], 'trim|strtolower|ucfirst') ?></li>
+      <?php endforeach ?>
+    </ul>
+  </div>
 <?php endforeach ?>
 
 <!-- Group WireArray objects by property. If group was executed on a WireArray object, grouped items will be WireArrays -->
 <?php foreach ($this->group($page->people, 'age', 'asc') as $age => $persons): ?>
-    <div>
-        <p>Age: <?=$age?></p>
-        <ul>
-            <?php foreach ($persons as $person): ?>
-                <li><?=$this->batch($person->name, 'trim|strtolower|ucfirst')?></li>
-            <?php endforeach ?>
-        </ul>
-    </div>
+  <div>
+    <p>Age: <?= $age ?></p>
+    <ul>
+      <?php foreach ($persons as $person): ?>
+        <li><?= $this->batch($person->name, 'trim|strtolower|ucfirst') ?></li>
+      <?php endforeach ?>
+    </ul>
+  </div>
 <?php endforeach ?>
 ```
 
@@ -262,7 +345,6 @@ $people = [
 Primarily used internally by the extension but provided in case it's useful. Identifies all WireArray and WireArray derived objects
 
 ```php
-
 <?php if ($this->isWireArray($page->image_gallery)): ?>
   <ul>
     <?php foreach ($page->image_gallery as $image): ?>
@@ -301,17 +383,19 @@ Returns the last item in an array, WireArray, or last character in a string, nul
 
 Optional second boolean argument will remove all null or WireNull items from the array before getting the first item.
 
+Alias for `nth` function retrieving last item by index. See [`nth`](#nth) for type handling and examples of working with nth values
+
 **Batchable**
 
 ```php
 <!-- Works with arrays -->
-<div>The last movie showing is: <?=$this->first(['10:00', '12:30', '15:45'])?>.</div>
+<p>The last movie showing is: <?=$this->first(['10:00', '12:30', '15:45'])?>.</p>
 
 <!-- Works with strings -->
-<div>Your name ends with the letter <?=$this->first($page->person_name)?>.</div>
+<p>Your name ends with the letter <?=$this->first($page->person_name)?>.</p>
 
 <!-- Works with WireArray and WireArray derived objects -->
-<div>True last item, nulls removed: <?=$this->last($page->race_results, true)->title?>.</div>
+<p>True last item, nulls removed: <?=$this->last($page->race_results, true)->title?>.</p>
 ```
 
 ### length
@@ -322,13 +406,13 @@ Gets the length of an array, WireArray, or string, null safe
 
 ```php
 <!-- Works with arrays -->
-<div>You have <?=$this->length(['book', 'hat', 'sunglasses'])?> items in your cart.</div>
+<p>You have <?=$this->length(['book', 'hat', 'sunglasses'])?> items in your cart.</p>
 
 <!-- Works with strings -->
-<div>You have <?=$this->length($page->person_name)?> letters in your name.</div>
+<p>You have <?=$this->length($page->person_name)?> letters in your name.</p>
 
 <!-- Works with WireArray and WireArray derived objects -->
-<div>You have <?=$this->length($page->family_members)?> family members coming to dinner.</div>
+<p>You have <?=$this->length($page->family_members)?> family members coming to dinner.</p>
 ```
 
 ### merge
@@ -339,38 +423,64 @@ Merges an arbitrary number of arrays or WireArray objects into one. Must all be 
 
 ```php
 <!-- Works with arrays -->
-<div>You have <?=$this->length(['book', 'hat', 'sunglasses'])?> items in your cart.</div>
+<p>You have <?=$this->length(['book', 'hat', 'sunglasses'])?> items in your cart.</p>
 
 <!-- Works with strings -->
-<div>You have <?=$this->length($page->person_name)?> letters in your name.</div>
+<p>You have <?=$this->length($page->person_name)?> letters in your name.</p>
 
 <!-- Works with WireArray and WireArray derived objects -->
-<div>You have <?=$this->length($page->family_members)?> family members coming to dinner.</div>
+<p>You have <?=$this->length($page->family_members)?> family members coming to dinner.</p>
 ```
 
 ### nth
 
 Gets the value at the nth position of an array, string, integer, float, or WireArray,
 
+Return type matches input type.
+
 ```php
-<!-- Works with arrays -->
-<div>The first movie showing is: <?=$this->nth(['10:00', '12:30', '15:45'], 1)?>.</div>
+<!-- Works with arrays, returns '12:30' -->
+<p>The first movie showing is: <?=$this->nth(['10:00', '12:30', '15:45'], 1)?>.</p>
 
 <!-- Nulls removed returns 15:45 -->
-<div>The second movie showing is: <?=$this->nth(['10:00', null, '15:45'], 1, true)?>.</div>
+<p>The second movie showing is: <?=$this->nth(['10:00', null, '15:45'], 1, true)?>.</p>
 
 <!-- Works with strings -->
-<div>The second letter in your name is: <?=$this->batch($this->nth($page->person_name, 1), 'strtoupper')?>.</div>
+<p>The second letter in your name is: <?=$this->batch($this->nth($page->person_name, 1), 'strtoupper')?>.</p>
+
+<!-- Works with integers, returns integer 9 -->
+<p>Lucky number: <?=$this->batch($this->nth(8392194, 2), 'strtoupper')?>.</p>
+
+<!-- Integers passed as strings will return a string, returns '1' -->
+<p>Lucky number: <?=$this->batch($this->nth('8392194', 4), 'strtoupper')?>.</p>
+
+<!-- Works with floats, returns integer 4 -->
+<p>Lucky number: <?=$this->batch($this->nth(3.14159, 3), 'strtoupper')?>.</p>
+
+<!-- Will return the decimal if at nth, returns string '.' -->
+<p>Lucky number: <?=$this->batch($this->nth(3.14159, 1), 'strtoupper')?>.</p>
 
 <!-- Works with WireArray and WireArray derived objects, nulls removed with third true argument -->
-<div>True 4th item, nulls removed: <?=$this->nth($page->race_results, 3, true)->title?>.</div>
+<p>True 4th item, nulls removed: <?=$this->nth($page->race_results, 3, true)->title?>.</p>
 ```
+
+### nthEnd
+
+Gets the item at the nth location from the end of an array, string, integer, float, or WireArray
+
+See [`nth`](#nth) for type handling and examples of working with nth indexes
 
 ### nth1
 
 Gets the nth item in an array, string, integer, float, or WireArray from index beginning at 1 rather than 0
 
-See [`nth`](#nth)
+See [`nth`](#nth) for type handling and examples of working with nth indexes
+
+### nth1End
+
+Gets the item at the nth location from the end of an array, string, integer, float, or WireArray indexed from 1 rather than 0
+
+See [`nth`](#nth) for type handling and examples of working with nth indexes
 
 ### odd
 
@@ -379,72 +489,85 @@ Returns whether an integer is odd or not
 **Batchable**
 
 ```php
-<div><?=$this->odd($page->number) ? "You're Odd" : 'Equal Slice'?></div>
+<p><?=$this->odd($page->number) ? "You're Odd" : 'Equal Slice'?></p>
 ```
 
-#### Split
+### product
 
-Splits a string to an array of characters, optionally specifying a separator, null safe
+Multiplies all values in a list array, values by key in an associative array, values in an array of stdClass objects by property, or values in WireArray/WireArray derived object by property
 
 **Batchable**
 
 ```php
-<!-- Splits characters by default -->
-<?php foreach ($this->split('abc') as $letter): ?>
-    <p>Letter: <?=$letter?></p>
-<?php endforeach ?>
+<!-- Gets product of values in an array, outputs 6000 -->
+<p>The product of the numbers in this series is: <?=$this->product([10, 20, 30])?></p>
 
-<!-- Splits characters with a defined separator -->
-<?php foreach ($this->split('a|b|c', '|') as $letter): ?>
-    <p>Letter: <?=$letter?></p>
-<?php endforeach ?>
+<!-- Gets product of values in an associative array, outputs 6000 -->
+<p>The product of the numbers in this series by 'foo' is: <?=$this->product([['foo' => 10], ['foo' => 20], ['foo' => 30]], 'foo')?></p>
+
+<!-- Gets product of values in an associative array, outputs 6000 -->
+<p>The product of the numbers in this series by 'foo' is: <?=$this->product($pages->find('field>=10'), 'foo')?></p>
 ```
 
-#### Reverse
+### random
 
-Reverses strings, arrays, and WireArrays, null safe
+Returns a random item in an array, WireArray, random character in a string, random number in an integer, or random value in a float.
 
-**Batchable**
+Does not generate cryptographically secure values
 
-```php
-<!-- Works with arrays -->
-<div><?=$this->reverse([1, 39, 17, 26])?>.</div>
-
-<!-- Works with strings -->
-<div>Your name, but backwards <?=$this->reverse($page->person_name)?>.</div>
-
-<!-- Works with WireArray and WireArray derived objects, useful for batching -->
-<div>Last place: <?=$this->batch($page->contestants, 'reverse')->title?>.</div>
-```
-
-#### Random
-
-Returns a random item in an array, WireArray, random character in a string, or random number in an integer
+Uses [`nth`](#nth) for selecting at a randomized index, refer to [`nth`](#nth) for type handling
 
 **Batchable**
 
 ```php
 <!-- Works with arrays -->
-<div>Your lucky number is: <?=$this->random([1, 39, 17, 26])?>.</div>
+<p>Your lucky number is: <?=$this->random([1, 39, 17, 26])?>.</p>
 
 <!-- Works with strings -->
-<div>Your name contains this letter <?=$this->random($page->person_name)?>.</div>
+<p>Your name contains this letter <?=$this->random($page->person_name)?>.</p>
 
 <!-- Works with WireArray and WireArray derived objects -->
-<div>You win: <?=$this->batch($page->prizes, 'random')?>.</div>
+<p>You win: <?=$this->batch($page->prizes, 'random')?>.</p>
 ```
 
-#### Truncate
+### reverse
 
-Truncates a string, wrapper for `WireTextTools::truncate()` method, accepts all arguments that ProcessWire method does
+Reverses strings, integers, floats, arrays, and WireArrays, null safe
+
+Return type will match input type. Integers return integers, floats return floats.
+
+**Batchable**
 
 ```php
-<div>Summary: <?=$this->truncate($page->description, 500)?></div>
+<!-- Works with arrays -->
+<p><?=$this->reverse([1, 39, 17, 26])?>.</p>
+
+<!-- Works with strings -->
+<p>Your name, but backwards <?=$this->reverse($page->person_name)?>.</p>
+
+<!-- Works with WireArray and WireArray derived objects, useful for batching -->
+<p>Last place: <?=$this->batch($page->contestants, 'reverse')->title?>.</p>
 ```
 
-#### Slice
+### singleSpaced
 
-Slices a string, array, WireArray, or WireArray derived object
+Converts all instances of multiple spaces in strings to single spaces.
+
+**Batchable**
+
+```php
+<!-- Works with arrays, returns 'who wrote this sentence?' -->
+<p><?=$this->collapseSpaces('who   wrote  this  sentence?')?>.</p>
+
+<!-- Batchable, outputs: 'Who wrote this sentence?' -->
+<p>This sentence has been cleaned up <?=$this->batch('   who WROTE this   sentence? ', 'trim|singleSpaced|strtolower|ucfirst')?></p>
+```
+
+### slice
+
+Slices a string, array, integer, float, WireArray, or WireArray derived object
+
+Note: when slicing integers and floats, the return value is a string. This is an intentional decision to preserve leading zeroes should they exist.
 
 ```php
 <!-- Works with arrays -->
@@ -455,13 +578,196 @@ Slices a string, array, WireArray, or WireArray derived object
 
 <!-- Strings -->
 <?=$this->slice($page->title, 2)?>
+
+<!-- Integers, returns '0003' -->
+<?=$this->slice($this->slice(200003, 2)?>
+
+<!-- If an integer or float is desired, consider casting or adding a PHP function to your batch chain -->
+<?=(int) $this->slice(200003, 2)?>
+                
+<?=$this->batch($this->slice(200003, 2), 'intval')?>
 ```
 
-#### URL
+### stripHtml
+
+Removes HTML markup from a string or array of strings. Non-string values are returned as passed. Multidimensional arrays are processed recursively.
+
+This is a wrapper for ProcessWire's `WireTextTools::markupToText()`. Second parameter takes an options array argument passed to the ProcessWire method
+
+**Batchable**
+
+```php
+<!-- Strings -->
+<?=$this->stripHtml("<blockquote><p>If I can't dance to it, it's not my revolution.</p></blockquote><p> —Emma Goldman</p>")?>
+
+<!-- Arrays -->
+<?php $this->stripHtml([
+  "<span>You're traveling through another dimension --</span><br>",
+  "<span>a dimension not only of sight and sound but of mind.</span><br>",
+  "<span>A journey into a wondrous land whose boundaries are that of imagination.</span><br>",
+  "<span>That's a signpost up ahead: your next stop: the Twilight Zone!</span><br>",
+])?>
+
+<!-- With recursive added to options argument -->
+<?php $this->stripHtml([
+  ['<p>One fish</p>', '<p>Two  fish</p>'],
+  ['<p>Red   fish</p>', '<p>Blue fish</p>'],
+], ['collapseSpaces' => true, 'recursive' => true])?>
+
+<!-- Example using a WireArray with fields -->
+<ul>
+  <?php foreach ($this->stripHtml($page->space_facts->explode('fact_body'))) as $spaceFact): ?>
+    <li><p><?=$spaceFact?></p></li>  
+  <?php endforeach ?>
+</ul>
+```
+
+### sum
+
+Returns the sum of all numbers in an array, associative array, WireArray, or WireArray derived object
+
+**Batchable**
+
+```php
+<!-- Gets sum of values in a list array, outputs 53 -->
+<div>Total cups of coffee consumed last week: <?=$this->sum([1, 4, 9, 2, 3, 10, 24])?></div>
+
+<!-- Gets sum of values in an associative array or array of objects, outputs 6 -->
+ Cocktails consumed at Goldeneye reunion: <?=$this->sum([
+  ['name' => 'James', 'drinks' => 2],
+  ['name' => 'Natalia', 'drinks' => 3],
+  ['name' => 'Boris', 'drinks' => 1],
+], 'beers')?>
+    
+<!-- Gets sum of values from a WireArray -->
+<p>Total points in high scores: <?=$this->product($pages->find('template=high_scores,points>=10'), 'points')?></p>
+```
+
+### toObject
+
+Provides fluent access to nested values by converting all associative arrays to stdClass objects recursively. List arrays are not modified. Changes the method of accessing values from array `[]` notation to a fluent object `->` notation. Safe to use with arrays containing any data types, does not rely on `json_encode`/`json_decode`
+
+Largely aesthetic, but may provide more readability for complex data structures
+
+**Batchable**
+
+```php
+<php
+// Given this array data structure
+$people = [
+    [
+        'name' => 'Marty McFly',
+        'occupation' => 'Time Traveler',
+        'skills' => [
+            'guitar',
+            'skateboarding',
+            'hoverboarding',
+            ],
+        'network' => [
+            'family' => [
+                [
+                    'name' => 'Lorraine McFly',
+                    'relation' => 'mother',
+                ],
+                [
+                    'name' => 'George McFly',
+                    'relation' => 'father',
+                ],
+            ],
+            'connections' => [
+                [
+                    'name' => 'Doc Brown',
+                    'relation' => 'friend',
+                ],
+                [
+                    'name' => 'Jennifer Parker',
+                    'relation' => 'girlfriend',
+                ],
+            ],
+        ],
+    ],
+    // ... ommitted for brevity
+];
+?>
+
+<!-- Object with fluent object access -->
+<?php foreach ($this->toObject($people) as $person): ?>
+  <h2><?=$person->name?></h2>
+  <h3><?=$person->occupation?></h3>
+  <p>Skills: <?=$this->csv($person->skills)?></p>
+  <h3>Family</h3>
+  <ul>
+    <?php foreach ($person->network->family as $individual): ?>
+      <li><?=$individual->name?>, <?=$individual->relation?></li>
+    <?php endforeach ?>
+  </ul>
+  <h3>Connections</h3>
+  <ul>
+    <?php foreach ($person->network->connections as $individual): ?>
+      <li><?=$individual->name?>, <?=$individual->relation?></li>
+    <?php endforeach ?>
+  </ul>
+<?php endforeach ?>
+```
+
+### truncate
+
+Truncates a string or an array of strings, wrapper for `WireTextTools::truncate()` method, accepts all arguments that ProcessWire method does
+
+```php
+<!-- Basic usage -->
+<p>Summary: <?=$this->truncate($page->description, 500)?></p>
+
+<!-- With arguments passed to WireTextTools::truncate() method -->
+<p>Summary: <?=$this->truncate($page->description, 500, ['type' => 'sentence'])?></p>
+
+<div>
+	Famous grocery lists:
+    <?php foreach ($this->truncate($page->grocery_lists->explode('text'), 500) as $text): ?>
+      <p><?=$text?></p>
+    <?php endforeach ?>
+</div>
+```
+
+### unique
+
+Returns only unique instances of values in a string, array, int, float, WireArray, or WireArray derived objects. The `WireArray::unique()` method is used when WireArray and WireArray derived objects are passed.
+
+**Batchable**
+
+```php
+<!-- Strings, returns 'abc' -->
+<p>Unique letters: <?=$this->unique('aabbcc')?></p>
+
+<!-- Unique numbers, returns 3852 -->
+<p>Unique letters: <?=$this->unique(33885555552)?></p>
+    
+<!-- With arguments passed to WireTextTools::truncate() method -->
+<p>Summary: <?=$this->truncate($page->description, 500, ['type' => 'sentence'])?></p>
+```
+
+### url
 Creates a query string or adds a query to a URL
 
 ```php
 <a href="<?=$this->url($page->external_url, ['utm_source' => $page->title, 'utm_campaign' => $page->campaign])?>">Find out more</a>
+```
+
+### wireGetArray
+
+An enhancement of the `WireArray::getArray()` method that adds optional recursion. Used internally by the extension.
+
+**Batchable**
+
+```php
+<!-- Strings -->
+<p>Unique letters: <?=$this->unique('aabbcc')?></p>
+
+<!-- Unique numbers, returns 3852 -->
+<p>Unique letters: <?=$this->unique(33885555552)?></p>
+    
+<!-- With arguments passed to WireTextTools::truncate() method -->
+<p>Summary: <?=$this->truncate($page->description, 500, ['type' => 'sentence'])?></p>
 ```
 
 ### Asset Loader Extension
@@ -586,7 +892,7 @@ You can also inline the contents of CSS or JS assets
 
 #### Preloading Assets
 
-You can also preload assets. Preloading assets works with CSS, JS, and font files. CSS and JS will have the correct cache busting parameter appended to the URL
+You can also preload assets via `<link>` tags. Preloading assets works with CSS, JS, and font files. CSS and JS will have the correct cache busting parameter appended to the URL
 
 ```php
 <!-- You may pass any type of file when using configured folders -->
@@ -616,7 +922,7 @@ The Wire Extension provides easy access to ProcessWire utilities that would othe
 ```php
 <!-- Get an instance of WireRandom -->
 
-<div>Here is a random string <?=$this->wireRandom()->alphanumeric()?></div>
+<p>Here is a random string <?=$this->wireRandom()->alphanumeric()?></p>
 
 <!-- Get an instace of WireTextTools -->
 

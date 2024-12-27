@@ -55,6 +55,8 @@ class AssetLoaderExtension implements ExtensionInterface
         $engine->registerFunction('inlineJs', [$this, 'inlineJs']);
 
         $engine->registerFunction('preloadAsset', [$this, 'preloadAsset']);
+        $engine->registerFunction('preloadAssets', [$this, 'preloadAssets']);
+
         $engine->registerFunction('preloadCss', [$this, 'preloadCss']);
         $engine->registerFunction('preloadJs', [$this, 'preloadJs']);
         $engine->registerFunction('preloadFont', [$this, 'preloadFont']);
@@ -213,6 +215,18 @@ class AssetLoaderExtension implements ExtensionInterface
             'js' => $this->preloadJs($parsedFolderFile->filepath),
             'font' => $this->preloadFont($parsedFolderFile->filepath),
         };
+    }
+
+    /**
+     * Preload multiple assets in one functio call
+     * @param  array  $folderFiles Files with configured folder prefix
+     * @return string
+     */
+    public function preloadAssets(array $folderFiles): string
+    {
+        $markup = array_map(fn ($folderFile) => $this->preloadAsset($folderFile), $folderFiles);
+
+        return implode("\n", $markup);
     }
 
     /**
