@@ -23,11 +23,10 @@
  * Methods that work with arrays also work with WireArray and WireArray derived classes such as
  * PageArrays
  *
- */
-
-/**
- * @todo iterationDivBy
- * @todo withIterator - Unpack to array? Convert each to stdClass with `i` property?
+ * Inspiration from:
+ *  https://github.com/nette/latte
+ *  https://github.com/rolandtoth/TemplateLatteReplace
+ *
  */
 
 declare(strict_types=1);
@@ -63,8 +62,9 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('bit', [$this, 'bit']);
         $engine->registerFunction('clamp', [$this, 'clamp']);
         $engine->registerFunction('csv', [$this, 'csv']);
+        $engine->registerFunction('detectVideoSvc', [$this, 'detectVideoSvc']);
         $engine->registerFunction('difference', [$this, 'difference']);
-        $engine->registerFunction('divBy', [$this, 'divBy']);
+        $engine->registerFunction('divsBy', [$this, 'divsBy']);
         $engine->registerFunction('divisibleBy', [$this, 'divisibleBy']);
         $engine->registerFunction('embedUrl', [$this, 'embedUrl']);
         $engine->registerFunction('eq', [$this, 'eq']);
@@ -92,6 +92,7 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('slice', [$this, 'slice']);
         $engine->registerFunction('stripHtml', [$this, 'stripHtml']);
         $engine->registerFunction('sum', [$this, 'sum']);
+        $engine->registerFunction('toList', [$this, 'toList']);
         $engine->registerFunction('truncate', [$this, 'truncate']);
         $engine->registerFunction('unique', [$this, 'unique']);
         $engine->registerFunction('url', [$this, 'url']);
@@ -184,9 +185,32 @@ class FunctionsExtension implements ExtensionInterface
         $url = trim($url);
         $url = html_entity_decode($url);
 
+        return match ($this->detectVideoSvc($url)) {
+            'vimeo' => $this->vimeoEmbedUrl($url, $parameters),
+            'youtube' => $this->youTubeEmbedUrl($url, $parameters),
+            default => null,
+        };
+    }
+
+    /**
+     * Determines if a video URL is either YouTube or Vimeo, null if unable to detect or empty
+     * value passed
+     *
+     * @param  string $url URL to analyze
+     * @return string|null  'vimeo', 'youtube', or null
+     */
+    public function detectVideoSvc(?string $url): ?string
+    {
+        if (!$url) {
+            return null;
+        }
+
+        $url = trim($url);
+        $url = html_entity_decode($url);
+
         return match (true) {
-            str_contains($url, 'vimeo') => $this->vimeoEmbedUrl($url, $parameters),
-            str_contains($url, 'youtu') => $this->youTubeEmbedUrl($url, $parameters),
+            str_contains($url, 'vimeo') => 'vimeo',
+            str_contains($url, 'youtu') => 'youtube',
             default => null,
         };
     }
@@ -221,14 +245,23 @@ class FunctionsExtension implements ExtensionInterface
             return null;
         }
 
-        return $this->url("https://player.vimeo.com/video/{$videoId}", $parameters);
+        $parameters = [
+            'badge' => 0,
+            'autopause' => 0,
+            'player_id' => 0,
+            ...$parameters,
+        ];
 
-        // https://player.vimeo.com/video/{$videoId}?badge=0&autopause=0&player_id=0&autoplay=1
+        $parameters = array_filter($parameters, fn ($value) => !is_null($value));
+
+        return $this->url("https://player.vimeo.com/video/{$videoId}", $parameters);
     }
 
     /**
      * Parses a YouTube video URL and returns an iframe embed-ready URL. Returns null if URL passed is
      * falsey or if URL is not a vimeo URL
+     *
+     * Regex source: https://stackoverflow.com/questions/3392993/php-regex-to-get-youtube-video-id
      *
      * @param  string|null $url        YouTube URL
      * @param  array       $parameters Parameters appended to the embed URL
@@ -242,7 +275,11 @@ class FunctionsExtension implements ExtensionInterface
 
         $url = html_entity_decode($url);
 
-        preg_match('%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})%', $url, $matches);
+        preg_match(
+            '%(?:youtube(?:-nocookie)?\.com/(?:[^/]+/.+/|(?:v|e(?:mbed)?)/|.*[?&]v=|live/)|youtu\.be/)([^"&?/ ]{11})%',
+            $url,
+            $matches
+        );
 
         if (count($matches) !== 2) {
             return null;
@@ -250,9 +287,14 @@ class FunctionsExtension implements ExtensionInterface
 
         $videoId = end($matches);
 
-        return $this->url("https://www.youtube.com/embed/{$videoId}", $parameters);
+        $parameters = [
+            'playsinline=1',
+            ...$parameters,
+        ];
 
-        // https://www.youtube.com/embed/{$videoId}?autoplay=1&playsinline=1
+        $parameters = array_filter($parameters, fn ($value) => !is_null($value));
+
+        return $this->url("https://www.youtube.com/embed/{$videoId}", $parameters);
     }
 
     /**
@@ -328,7 +370,7 @@ class FunctionsExtension implements ExtensionInterface
      *
      * @see FunctionsExtension::divisibleBy()
      */
-    public function divBy(int|float|null $value, int|float|null $by): bool
+    public function divsBy(int|float|null $value, int|float|null $by): bool
     {
         return $this->divisibleBy($value, $by);
     }
@@ -553,6 +595,20 @@ class FunctionsExtension implements ExtensionInterface
         }, $value);
 
         return array_is_list($array) ? $array : (object) $array;
+    }
+
+    /**
+     * Converts a value to an index array. Associative arrays are returned indexed without keys.
+     * @param  iterable $value Array, WireArray, or WireArray derived object
+     * @return array
+     */
+    public function toList(iterable $value): array
+    {
+        if ($this->isWireArray($value)) {
+            return array_values($value->getArray());
+        }
+
+        return array_values($value);
     }
 
     /**

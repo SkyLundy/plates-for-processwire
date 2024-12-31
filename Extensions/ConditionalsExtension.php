@@ -29,13 +29,14 @@ class ConditionalsExtension implements ExtensionInterface
         $this->engine = $engine;
 
         $engine->registerFunction('attrIf', [$this, 'attrIf']);
-        $engine->registerFunction('classIf', [$this, 'classIf']);
         $engine->registerFunction('if', [$this, 'if']);
         $engine->registerFunction('ifEq', [$this, 'ifEq']);
         $engine->registerFunction('ifPage', [$this, 'ifPage']);
         $engine->registerFunction('ifTag', [$this, 'ifTag']);
         $engine->registerFunction('ifUrl', [$this, 'ifUrl']);
         $engine->registerFunction('match', [$this, 'match']);
+        $engine->registerFunction('matchInt', [$this, 'matchInt']);
+        $engine->registerFunction('matchStr', [$this, 'matchStr']);
         $engine->registerFunction('matchTrue', [$this, 'matchTrue']);
         $engine->registerFunction('switch', [$this, 'switch']);
         $engine->registerFunction('tagIf', [$this, 'tagIf']);
@@ -46,7 +47,6 @@ class ConditionalsExtension implements ExtensionInterface
      *
      * @param  mixed  $conditional Value to test
      * @param  mixed  $truthyValue Value to output if truthy condition
-     * @param  mixed  $falseValue  Value to output if falsey condition, null by default
      * @return mixed
      */
     public function if(
@@ -54,11 +54,12 @@ class ConditionalsExtension implements ExtensionInterface
         mixed $truthyValue = null,
         mixed $falseValue = null
     ): mixed {
-        return !!$conditional ? $truthyValue : $falseValue;
+        return !!$conditional ? $truthyValue : null;
     }
 
     /**
      * If the first argument strict equals the second argument, return the value
+     *
      * @param  mixed  $if     Value to test
      * @param  mixed  $match  Value that triggers truth
      * @param  mixed  $value  Value to return if comparison evaluates to true
@@ -196,7 +197,7 @@ class ConditionalsExtension implements ExtensionInterface
      * @param  mixed  $value      Value to check against conditional options
      * @param  array  $cases Array of values to output
      * @param  mixed  $default    Default value if all cases fail
-     * @return mixed  Returns null or
+     * @return mixed
      */
     public function match(mixed $conditional, array $cases = [], mixed $default = null): mixed
     {
@@ -207,6 +208,30 @@ class ConditionalsExtension implements ExtensionInterface
         }
 
         return $default;
+    }
+
+    /**
+     * Executes match() with first argument cast to an integer
+     *
+     * @see ConditionalsExtension::match()
+     *
+     * @return mixed
+     */
+    public function matchInt(mixed $conditional, array $cases = [], $default = null): mixed
+    {
+        return $this->match((int) $conditional, $cases, $default);
+    }
+
+    /**
+     * Executes ConditionalsExtension::match() with first argument cast to a string
+     *
+     * @see ConditionalsExtension::match()
+     *
+     * @return mixed
+     */
+    public function matchStr(mixed $conditional, array $cases = [], mixed $default = null): mixed
+    {
+        return $this->match((string) $conditional, $cases, $default);
     }
 
     /**
@@ -272,21 +297,4 @@ class ConditionalsExtension implements ExtensionInterface
             return " {$attr}=\"{$value}\"";
         }
     }
-
-    /**
-     * Shorthand alias for attrIf that outputs class attribute with values
-     *
-     * @param  mixed      $conditional Value checked
-     * @param  string|int $valueTrue   Value returned if conditional true, optional
-     * @param  string|int $valueFalse  Value returned if conditional false optional
-     * @return string                  Attribute with value determined by $conditional
-     */
-    public function classIf(
-        mixed $conditional,
-        mixed $valueTrue = null,
-        mixed $valueFalse = null,
-    ): mixed {
-        return $this->attrIf($conditional, 'class', $valueTrue, $valueFalse);
-    }
-
 }

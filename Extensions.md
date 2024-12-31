@@ -1,8 +1,13 @@
 # Plates for ProcessWire Extensions
 
-Plates for ProcessWire comes with custom extensions pre-built for use in your Plates template files. These extensions are optional and can be enabled when configuring the module. These extensions are purely provided as quality-of-life additions and are not necessary to use Plates in your ProcessWire project.
+Plates is a very light and minimal templating engine that focuses on file organization and markup output but provides an API to add custom functions via extensions. These extensions provide some enhancements both original and inspired by other template engines. The extensions included in Plates for ProcessWire are optional and can be enabled when configuring the module. These extensions are purely provided as quality-of-life additions and are not necessary to use Plates in your project.
 
 If bugs are encountered, please open an issue on the Plates for ProcessWire Github repository. If you're able to provide a bugfix, merge requests are very much welcome.
+
+- [Conditionals Extension](#conditionals-extension)
+- [Functions Extension](#functions-extension)
+- [Asset Loader Extension](#asset-loader-extension)
+- [WireExtension](#wire-extension)
 
 ---
 
@@ -17,40 +22,27 @@ Outputs an attribute if conditional is truthy. Second argument is the attribute.
 Note that the space before the opening `<?=` is ommitted. Attributes are automatically padded with a leading space to prevent empty spaces in markup if the attribute is not added at runtime
 
 ```php
-<!-- Two arguments -->
+<!-- Two arguments, outputs attribute only if the first argument is truthy -->
 <button type="submit"<?=$this->attrIf($form->errors, 'disabled')?>>
     Submit Form
 </button>
 
-<!-- Three arguments -->
-<div<?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_values)>
-</div>
-```
+<!-- Optional third argument is a value assigned to the attribute if the first argument is truthy -->
+<div<?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_json)></div>
 
-### classIf
-
-Shorthand for conditional attribute, but assumes class. Can be used with one or both values
-
-Note that the space before the opening `<?=` is ommitted. Attributes are automatically padded with a leading space to prevent empty spaces in markup if the attribute is not added at runtime
-
-```php
-<button type="submit"<?=$this->classIf($errors, 'border-2 border-red-500', 'bg-blue-200')?>>
-    Submit Form
-</button>
+<!-- Optional fourth argument is a value assigned to the attribute if the first argument is falsey -->
+<div<?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_json, '{}')></div>
 ```
 
 ### if
 
-Outputs value if first argument is truthy. Useful for a single line one comparison/value where the value being evaluated is never output to the page. Optional second value to return on false. Weakly compares values. More complex cases should use native PHP language features, [`match`](#match), or [`matchTrue`](#matchTrue)
+Outputs value if first argument is truthy, weakly compared. Useful for a single line one comparison/value where the value being evaluated is never output to the page. Weakly compares values. Returns null if first argument is falsey. More complex cases should use native PHP language features, [`match`](#match), or [`matchTrue`](#matchTrue)
 
 Arguments and values returned may be of any type.
 
 ```php
 <!-- Will output 'your order is ready' if `$orderReady` is true, $orderReady is never output to the page -->
 <p>Hello, <?=$this->if($orderReady, 'your order is ready')?></p>
-
-<!-- With optional third argument -->
-<p>Hello, <?=$this->if($orderReady, 'your order is ready', 'please complete checkout')?></p>
 
 <!-- Native PHP alternatives -->
 
@@ -63,16 +55,13 @@ Arguments and values returned may be of any type.
 <!-- If the first argument is an output value that may be null or not present in an array, consider the null coalescing operator -->
 <p>Hello, <?=$order['shippingStatus'] ?? 'your order is still being processed')?></p>
 
-<!-- If the first argument may be an object or null, consider the null safe operator -->
-<p>Hello, <?=$order?->shippingStatus ?? 'your order is still being processed')?></p>
-
 <!-- If the first argument may be an object or null but required a method call, consider the null safe operator -->
 <p>Hello, <?=$order?->shippingMessage() ?? 'your order is still being processed')?></p>
 ```
 
 ### ifEq
 
-Outputs value if first argument is true compared to second argument. Optional fourth boolean argument for strict/weak comparison. Default is strict.
+Version of [if](#if) that outputs a single value if the first argument matches the second argument strictly compared. Returns null otherwise
 
 Arguments and values returned may be of any type
 
@@ -82,6 +71,9 @@ Arguments and values returned may be of any type
     <?=$this->ifEq($errors['name'], 'required', '<span class="form-label">This field is required</span>')?>
     <input type="text" class="required">
 </label>
+
+<!-- 4th argument true forces strict === comparison -->
+<input type="text" value="<?=$this->ifEq($somethingNull, '0', 'Will not output', true)?>">
 ```
 
 ### match
@@ -89,11 +81,12 @@ Arguments and values returned may be of any type
 Outputs value in an array of cases where key matches the first argument passed. Optional third argument for default case
 
 ```php
+<!-- Returns first value where key matches the first argument. Returns null if no cases match -->
 <div class="<?=$this->match($color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'])?>">
     Hello!
 </div>
 
-<!-- With default -->
+<!-- With default 3rd argument -->
 <div class="<?=$this->match($color, ['red' => 'bg-red-500', 'yellow' => 'bg-amber-500', 'green' => 'bg-emerald-500'], 'bg-blue-500')?>">
     Hello!
 </div>
@@ -101,7 +94,7 @@ Outputs value in an array of cases where key matches the first argument passed. 
 
 ### matchTrue
 
-Returns a value based on a provided evaluation. Similar to match but can handle more complex cases.
+Returns the key where the first value in array evaluates to true
 
 ```php
 <p>Your account is <?=$this->matchTrue(['current', $daysUntilDue >= 1, 'due' => $daysUntilDue == 0, 'past due' => $daysUntilDue < 0])?></p>
@@ -113,7 +106,7 @@ Alias for [`match`](#match )
 
 ### tagIf
 
-Outputs one of two tags depending on the truthiness of the first argument
+Outputs one of two tags depending on the truthiness of the first argument with a method that will close with the tag that was opened
 
 ```php
 <<?=$this->tagIf($page->headline, 'h3', 'h2'?> class="text-neutral-500">
@@ -167,9 +160,8 @@ Useful when `true` or `false` needs to be output in some way to the page where `
 
 ```php
 <div x-data="{
-       showMap: <?=$this->bit($page->show_map)?>,
        init() {
-         if (this.showMap) {
+         if (<?=$this->bit($page->show_map)?>) {
             // ...
          }
        }
@@ -211,6 +203,10 @@ Subtracts all values in an array or WireArray by property. Accepts values that c
 <=$this->difference($page->discounts, 'amount_field');
 ```
 
+### divsBy
+
+Alias for [divisibleBy](#divisibleby)
+
 ### divisibleBy
 
 Returns whether a number can be divided by another 
@@ -224,6 +220,19 @@ Returns whether a number can be divided by another
     </li>
   <?php endforeach?>
 </ul>
+```
+
+### embedUrl
+
+Creates an embed URL from either a YouTube or Vimeo video link. Autodetects service from URL. Optional second argument is an array where URL parameters may be added.
+
+**Batchable**
+
+```php
+<iframe src="<?=$this->embedUrl('https://www.youtube.com/watch?v=ODmhPsgqGgQ', ['controls' => 0])?>" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+<!-- Vimeo URL. Appends default parameters included by Vimeo when copying the embed code from a video -->
+<iframe src="<?=$this->embedUrl('https://vimeo.com/2039264832', ['autoplay' => 1])?>" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write"></iframe>
 ```
 
 ### eq
@@ -742,8 +751,7 @@ Returns only unique instances of values in a string, array, int, float, WireArra
 <!-- Unique numbers, returns 3852 -->
 <p>Unique letters: <?=$this->unique(33885555552)?></p>
     
-<!-- With arguments passed to WireTextTools::truncate() method -->
-<p>Summary: <?=$this->truncate($page->description, 500, ['type' => 'sentence'])?></p>
+
 ```
 
 ### url
@@ -753,26 +761,36 @@ Creates a query string or adds a query to a URL
 <a href="<?=$this->url($page->external_url, ['utm_source' => $page->title, 'utm_campaign' => $page->campaign])?>">Find out more</a>
 ```
 
-### wireGetArray
+### vimeoEmbedUrl
 
-An enhancement of the `WireArray::getArray()` method that adds optional recursion. Used internally by the extension.
+Creates an embed URL from a Vimeo video link. Optional second argument is an array where URL parameters may be added.
+
+See [embedUrl](#embedurl) to create URLs for Vimeo or YouTube with autodetection
 
 **Batchable**
 
 ```php
-<!-- Strings -->
-<p>Unique letters: <?=$this->unique('aabbcc')?></p>
+<!-- Vimeo URL. Appends default parameters included by Vimeo when copying the embed code from a video, may be removed by passing the parameter with a null value in the second argument -->
+<iframe src="<?=$this->embedUrl('https://vimeo.com/2039264832', ['autoplay' => 1])?>" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write"></iframe>
+```
 
-<!-- Unique numbers, returns 3852 -->
-<p>Unique letters: <?=$this->unique(33885555552)?></p>
-    
-<!-- With arguments passed to WireTextTools::truncate() method -->
-<p>Summary: <?=$this->truncate($page->description, 500, ['type' => 'sentence'])?></p>
+### youTubeEmbedUrl
+
+Creates an embed URL from a YouTube video link. Optional second argument is an array where URL parameters may be added.
+
+See [embedUrl](#embedurl) to create URLs for Vimeo or YouTube with autodetection
+
+**Batchable**
+
+```php
+<iframe src="<?=$this->embedUrl('https://www.youtube.com/watch?v=ODmhPsgqGgQ', ['controls' => 0])?>" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
 ```
 
 ### Asset Loader Extension
 
 The asset loader extension provides tools to easily manage loading CSS, JS, and font assets. In the case of CSS and JS files,  cache parameter strings based on the last update time for files are automatically added when rendering to the page. It also provides tools for preloading assets as needed. With the asset loader extension your `<link>` and `<script>` tags are automatically created for you.
+
+This extension provides the functionality of Plates' optional [Asset](https://platesphp.com/extensions/asset/) extension but adds folder behavior and markup generation.
 
 This extension provides two ways to interact with your files:
 

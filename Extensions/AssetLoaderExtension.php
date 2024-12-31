@@ -315,6 +315,10 @@ class AssetLoaderExtension implements ExtensionInterface
      */
     private function parseAssetConfigs(string $assetConfigs): void
     {
+        if (!$assetConfigs) {
+            return;
+        }
+
         $assetConfigs = explode("\n", $assetConfigs);
 
         $definitions = array_map(function($config) {
