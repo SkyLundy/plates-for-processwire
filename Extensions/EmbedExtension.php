@@ -13,6 +13,7 @@ use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use League\Plates\Template\Template;
 use LogicException;
+use Plates\Extensions\Objects\Capture;
 
 class EmbedExtension implements ExtensionInterface
 {
@@ -33,12 +34,13 @@ class EmbedExtension implements ExtensionInterface
         $engine->registerFunction('stopEmbed', [$this, 'stopEmbed']);
         $engine->registerFunction('endEmbed', [$this, 'endEmbed']);
 
-        $engine->registerFunction('startCapture', [$this, 'startCapture']);
-        $engine->registerFunction('stopCapture', [$this, 'stopCapture']);
-        $engine->registerFunction('endCapture', [$this, 'endCapture']);
+        $engine->registerFunction('startBlock', [$this, 'startBlock']);
+        $engine->registerFunction('stopBlock', [$this, 'stopBlock']);
+        $engine->registerFunction('endBlock', [$this, 'endBlock']);
 
-        $engine->registerFunction('captureTo', [$this, 'captureTo']);
-        $engine->registerFunction('captureValue', [$this, 'captureValue']);
+        $engine->registerFunction('blockValue', [$this, 'blockValue']);
+
+        $engine->registerFunction('capture', [$this, 'capture']);
     }
 
     public function getObject(?string $method = null, ...$args): self
@@ -53,6 +55,10 @@ class EmbedExtension implements ExtensionInterface
 
         return $this;
     }
+
+    /**
+     * Embeds
+     */
 
     private ?string $embedTemplate = null;
     private array $insertData = [];
@@ -117,7 +123,7 @@ class EmbedExtension implements ExtensionInterface
      * @return void
      * @throws LogicException
      */
-    public function captureTo(string $variableName, string|int|float|null $value): void
+    public function blockValue(string $variableName, string|int|float|null $value): void
     {
         !$this->embedTemplate && throw new LogicException(
             'You must start an embed before capturing a value'
@@ -128,62 +134,76 @@ class EmbedExtension implements ExtensionInterface
     }
 
     /**
-     * Alias for captureTo()
+     * Embed Blocks
      */
-    public function captureValue(string $variableName = '', string|int|float|null $value): void
-    {
-        $this->captureTo($variableName, $value);
-    }
 
-    private ?string $activeCapture = null;
+    private ?string $activeBlock = null;
 
     /**
-     * Starts a capture block
+     * Starts an embed block
+     *
      * @param  string $name Name of the capture that matches a variable in the template to render
      * @return void
      * @throws LogicException
      */
-    public function startCapture(string $variableName): void
+    public function startBlock(string $variableName): void
     {
         !$variableName && throw new LogicException(
-            'You must provide the name of a variable when capturing'
+            'You must provide the name of a variable when starting a block'
         );
 
         !$this->embedTemplate && throw new LogicException(
-            'You must start an embed before capturing'
+            'You must start an embed before starting a block'
         );
 
-        $this->activeCapture && throw new LogicException(
-            'You cannot nest embed captures'
+        $this->activeBlock && throw new LogicException(
+            'You cannot nest embed blocks'
         );
 
-        $this->activeCapture = $variableName;
+        $this->activeBlock = $variableName;
 
-        $this->insertData[$this->activeCapture] = null;
+        $this->insertData[$this->activeBlock] = null;
 
         ob_start();
     }
 
     /**
-     * Stops capturing the current block and stores the embedd value for later rendering
+     * Stops capturing the current block and stores the value for later rendering
+     *
      * @return void
      * @throws LogicException
      */
-    public function stopCapture(): void
+    public function stopBlock(): void
     {
-        !$this->embedTemplate && throw new LogicException('An embed must be started before capturing');
-        !$this->activeCapture && throw new LogicException('A capture must be started before it can be stopped');
+        !$this->embedTemplate && throw new LogicException('An embed must be started before block is ended');
+        !$this->activeBlock && throw new LogicException('A block must be started before it can be stopped');
 
-        $this->insertData[$this->activeCapture] = ob_get_clean();
+        $this->insertData[$this->activeBlock] = ob_get_clean();
 
-        $this->activeCapture = null;
+        $this->activeBlock = null;
     }
 
     /**
-     * Alias for stopCapture()
+     * Alias for stopBlock()
      */
-    public function endCapture(): void
+    public function endBlock(): void
     {
-        $this->stopCapture();
+        $this->stopBlock();
+    }
+
+    /**
+     * Captures
+     */
+
+    private ?string $captureActive = null;
+
+    /**
+     * Starts a capture and returns a new Capture instance
+     *
+     * @return Capture
+     */
+    public function capture(): Capture
+    {
+        return new Capture();
     }
 }
