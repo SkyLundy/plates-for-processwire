@@ -28,8 +28,7 @@ class EmbedExtension implements ExtensionInterface
     {
         $this->engine = $engine;
 
-        $engine->registerFunction('embed', [$this, 'getObject']);
-
+        $engine->registerFunction('embed', [$this, 'embed']);
         $engine->registerFunction('startEmbed', [$this, 'startEmbed']);
         $engine->registerFunction('stopEmbed', [$this, 'stopEmbed']);
         $engine->registerFunction('endEmbed', [$this, 'endEmbed']);
@@ -50,7 +49,7 @@ class EmbedExtension implements ExtensionInterface
         }
 
         if ($method && str_contains($method, '::')) {
-            $this->startEmbed($method);
+            $this->embed($method);
         }
 
         return $this;
@@ -61,28 +60,35 @@ class EmbedExtension implements ExtensionInterface
      */
 
     private ?string $embedTemplate = null;
-    private array $insertData = [];
-    private ?string $activeEmbed = null;
+
+    private array $templateData = [];
 
     /**
      * Start embed to render template with blocks assigned to variables and passed to template
      * as data
      *
-     * An insertEmbed will automatically output (echo) the content and blocks embedd
+     * embed will automatically insert content to the page when ended
      *
      * @param  string $name Name of template to render
      * @param  array  $data Data to pass to the rendered template
      * @return void
      * @throws LogicException
      */
-    public function startEmbed(string $name, array $data = []): void
+    public function embed(string $name, array $data = []): void
     {
         $this->embedTemplate && throw new LogicException('You cannot nest embeds');
 
         $this->embedTemplate = $name;
-        $this->insertData = $data;
+        $this->templateData = $data;
     }
 
+    /**
+     * Alias for embed()
+     */
+    public function startEmbed(string $name, array $data = []): void
+    {
+        $this->embed($name, $data);
+    }
 
     /**
      * Stops the embed and renders the selected template
@@ -96,18 +102,20 @@ class EmbedExtension implements ExtensionInterface
         );
 
         $embedTemplate = $this->embedTemplate;
-        $insertData = $this->insertData;
+        $templateData = $this->templateData;
 
         $this->embedTemplate = null;
-        $this->insertData = [];
+        $this->templateData = [];
 
         $template = new Template($this->engine, $embedTemplate);
 
-        $template->insert($embedTemplate, $insertData);
+        $template->insert($embedTemplate, $templateData);
     }
 
     /**
      * Alias for stopEmbed()
+     *
+     * @return string|void Depending on insert
      */
     public function endEmbed(): void
     {
@@ -115,27 +123,27 @@ class EmbedExtension implements ExtensionInterface
     }
 
     /**
+     * Embed Blocks
+     */
+
+    /**
      * A short single value embed that will be assigned to a variable without a block start/stop
      * when used within an embed or insertEmbed
      *
      * @param  string          $name  Name of embed that matches a variable in the template to render
-     * @param  string|int|float|null $value Value to insert
+     * @param  mixed $value Value to insert
      * @return void
      * @throws LogicException
      */
-    public function blockValue(string $variableName, string|int|float|null $value): void
+    public function blockValue(string $variableName, mixed $value): void
     {
         !$this->embedTemplate && throw new LogicException(
-            'You must start an embed before capturing a value'
+            'You must start an embed before inserting a block value'
         );
 
-        $this->insertData[$variableName] = $value;
+        $this->templateData[$variableName] = $value;
 
     }
-
-    /**
-     * Embed Blocks
-     */
 
     private ?string $activeBlock = null;
 
@@ -149,7 +157,7 @@ class EmbedExtension implements ExtensionInterface
     public function startBlock(string $variableName): void
     {
         !$variableName && throw new LogicException(
-            'You must provide the name of a variable when starting a block'
+            'You must provide the name of a template variable when starting a block'
         );
 
         !$this->embedTemplate && throw new LogicException(
@@ -162,7 +170,7 @@ class EmbedExtension implements ExtensionInterface
 
         $this->activeBlock = $variableName;
 
-        $this->insertData[$this->activeBlock] = null;
+        $this->templateData[$this->activeBlock] = null;
 
         ob_start();
     }
@@ -175,10 +183,15 @@ class EmbedExtension implements ExtensionInterface
      */
     public function stopBlock(): void
     {
-        !$this->embedTemplate && throw new LogicException('An embed must be started before block is ended');
-        !$this->activeBlock && throw new LogicException('A block must be started before it can be stopped');
+        !$this->embedTemplate && throw new LogicException(
+            'An embed must be started before block is ended'
+        );
 
-        $this->insertData[$this->activeBlock] = ob_get_clean();
+        !$this->activeBlock && throw new LogicException(
+            'A block must be started before it can be stopped'
+        );
+
+        $this->templateData[$this->activeBlock] = ob_get_clean();
 
         $this->activeBlock = null;
     }
@@ -195,15 +208,14 @@ class EmbedExtension implements ExtensionInterface
      * Captures
      */
 
-    private ?string $captureActive = null;
-
     /**
      * Starts a capture and returns a new Capture instance
      *
+     * @param string|null $functions Optional function string executed on output via batch
      * @return Capture
      */
     public function capture(): Capture
     {
-        return new Capture();
+        return new Capture($this->template);
     }
 }
