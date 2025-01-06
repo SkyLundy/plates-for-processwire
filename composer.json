@@ -1,0 +1,25 @@
+{
+  "name": "firewire/plates-for-processwire",
+  "type": "pw-module",
+  "description": "An adapter and tools for using the Plates templating engine with ProcessWire",
+  "keywords": [
+    "processwire",
+    "module",
+    "templates",
+    "templating"
+  ],
+  "homepage": "https://github.com/SkyLundy/plates-for-processwire",
+  "license": "GPL-3.0-or-later",
+  "authors": [
+    {
+      "name": "Sky Lundy",
+      "homepage": "https://www.skylundy.io",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=8.1.0",
+    "wireframe-framework/processwire-composer-installer": "^1.1.1",
+    "league/plates": "^3.6"
+  }
+}

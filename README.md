@@ -7,20 +7,18 @@ What Plates for ProcessWire offers:
 
 - Preloaded and globally available ProcessWire API in all of your Plates template files
 - Pre-configured for use with the ProcessWire templates directory
-- Optional additional extensions built just for this module that add powerful and chainable methods to work with data
-- Optional extensions include functions designed for working with ProcessWire objects for a more integrated workflow
-
-**NOTE:** This is an early release. Test Plates for ProcessWire in you application thoroughly and report bugs by filing an issue on the Git repository.
+- Optional additional custom extensions built for this module that add powerful and chainable methods to work with data, can be enabled and disabled via the module config page
+- Add enable and disable core Plates extensions via the module config page
 
 ## An Introduction to Plates
 
-From the [documentation]():
+From the [documentation](https://platesphp.com/):
 
 > Plates is a native PHP template system that’s fast, easy to use and easy to extend. It’s inspired by the excellent Twig template engine and strives to bring modern template language functionality to native PHP templates. Plates is designed for developers who prefer to use native PHP templates over compiled template languages, such as Twig or Smarty.
 
 ### Why a ProcessWire module for Plates?
 
-There are many templating languages to choose from, some already have ProcessWire modules to make integration easy. They work for many people, and that's great. What they may be lacking in is the core PHP-first approach that ProcessWire provides developers. Plates provides powerful yet simple tools that feel more at home with ProcessWire than any other templating engine. Whether you've worked with templating engines in the past or not, with or without ProcessWire, you'll be up to speed incredibly fast.
+There are many templating engines and syntaxes to choose from, some already have ProcessWire modules to make integration easy. They work for many people, and that's great. What they may be lacking in is the core PHP-first approach that ProcessWire provides developers. Plates provides powerful yet simple tools that feel more at home with ProcessWire. Whether you've worked with templating engines in the past or not, with or without ProcessWire, you'll be up to speed incredibly fast.
 
 ## Requirements & Usage
 
@@ -45,7 +43,7 @@ Requirements:
 
 Before getting started with Plates in ProcessWire, it's highly recommended that you review the (very short and simple) documentation to get a feel for how Plates works, its features, and approach to templating. After reviewing that information, come back and see how Plates for ProcessWire will work for your application or website.
 
-You may skip any steps that create new objects such as `Engine` or manually creating templates. Plates for ProcessWire handles all of that for you.
+You may skip any steps in the documentation that create new objects such as `Engine` or manually creating templates. Plates for ProcessWire handles all of that for you.
 
 [View the Plates documentation here](https://platesphp.com/getting-started/simple-example/)
 
@@ -55,9 +53,9 @@ Using Plates for ProcessWire is very simple. The module handles creating the Pla
 
 - A global `$plates` object that references the module
 - The full ProcessWire API to all Plates template and layout files
-- Optional helper functions included via custom Extensions included with this module that can be added on the module config page if desired
+- Optional custom Extensions included with this module that can be managed via the module config page
 
-Plates for ProcessWire automatically creates the `Engine` object and specifies the `templates` directory for you. The following shows how the concepts outlined in the Plates documentation have been adapted for use in ProcessWire.
+Plates for ProcessWire automatically creates the `Engine` object and specifies `/site/templates` as the root directory for you. The following shows how the concepts outlined in the Plates documentation are adapted for use in ProcessWire.
 
 Where the Plates documentation references the variable `$templates`, use `$plates->templates` instead.
 
@@ -65,22 +63,25 @@ Where the Plates documentation references the variable `$templates`, use `$plate
 
 Documentation reference: [Folders in Plates](https://platesphp.com/engine/folders/).
 
-Assuming this directory structure:
+**Note:** This module is configured to use a file extension that differs from the Plates documentation to help differentiate ProcessWire template files from Plates templates. The default file extension when using this module is `.plates.php` however this may be changed to any file extension you prefer on the module config page.
+
+Assuming this directory structure with a basic set of files:
 ```
 site/
   templates/
     components/
-      image_gallery.php
+      image_gallery.plates.php
     layouts/
-      main.php
+      main.plates.php
     views/
-      home.view.php
+      home.plates.php
     home.php
 ```
 
-Folders can be registered in `ready.php`
+Folders are best registered in `ready.php`
 
 ```php
+// /site/ready.php
 $templatesDir = $config->paths->templates;
 
 $plates->templates->addFolder('components', "{$templatesDir}components");
@@ -92,29 +93,22 @@ $plates->templates->addFolder('views', "{$templatesDir}views");
 
 Documentation reference: [Simple Example](https://platesphp.com/getting-started/simple-example/)
 
-Rendering templates in Plates is both flexible and simple. We use ProcessWire templates as a "controller" that will render markup from Plates template files. To do this we add a single line to our ProcessWire template that renders a Plates template.
+ProcessWire templates act as a "controller" that will render markup from Plates template files. To do this we add a single line to our ProcessWire template.
 
 ```php
 // /site/templates/home.php
-<?=$plates->templates->render('views::home.view')?>
-```
-
-As mentioned, the entire ProcessWire API is made available to all Plates files so there is no need to pass any specific ProcessWire objects. In the event you need to pass additional data, that can be done as the documentation specifies.
-
-```php
-// site/templates/home.php
-<?=$plates->templates->render('views::home.view', ['yourVariable' => 'Hello'])?>
+<?=$plates->templates->render('views::home')?>
 ```
 
 ### That's it. You're ready to use Plates in your ProcessWire projects
 
-Plates for ProcessWire also comes with additional tools you can use in your projects via extensions included with this module. [Read about them here](#plates-for-processwire-extensions).
+
 
 ---
 
 ### Accessing the Plates Template object outside of a Plates template
 
-In Plates template files, like `home.view.php` above, the file is rendered by Plates and so exists within the `Template` plates object. Any Plates template file output _inside_ the `$plates->templates->render()` method is a Plates `Template` object. This includes views, layouts, components, etc.
+In Plates template files, like `home.plates.php` above, the file is rendered by Plates and so exists within the `Template` plates object. Any Plates template file output _inside_ the `$plates->templates->render()` method is a Plates `Template` object.
 
 There may be rare occasions where you want to access the Template object outside of the current template. Plates For ProcessWire makes this easy.
 
@@ -129,7 +123,7 @@ There may be rare occasions where you want to access the Template object outside
 <!-- Template markup and output below -->
 ```
 
-A good example of accessing the parent Plates template outside of the template itself is when inside the scope of blocks in [RockPageBuilder](https://www.baumrock.com/en/processwire/modules/rockpagebuilder/).
+A good example of accessing the parent Plates template elsewhere is inside Blocks when using [RockPageBuilder](https://www.baumrock.com/en/processwire/modules/rockpagebuilder/).
 
 ## Custom Functions & Extensions
 

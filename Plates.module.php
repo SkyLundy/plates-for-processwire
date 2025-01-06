@@ -76,7 +76,7 @@ class Plates extends WireData implements Module, ConfigurableModule
     public function ___initialize(?string $templatesDir = null): Engine
     {
         $templatesDir =  rtrim($templatesDir ?? $this->wire('config')->paths->templates, '/');
-
+// dd($templatesDir);
         $fileExtension = ltrim($this->plates_file_extension ?: self::DEFAULT_FILE_EXTENSION, '.');
 
         return new Engine($templatesDir, $fileExtension);
@@ -246,12 +246,9 @@ class Plates extends WireData implements Module, ConfigurableModule
 
         $inputfields->add($fieldset);
 
-        $extensionsDocumentationFile = wire('config')->urls->$this . 'Extensions.md';
-
         $fieldset = $modules->InputfieldFieldset;
         $fieldset->label = 'Plates for ProcessWire Extensions';
-        $fieldset->description = 'Additional functions and features to enhance templates and workflows';
-        $fieldset->notes = "Documentation can be viewed in [{$extensionsDocumentationFile}]({$extensionsDocumentationFile})";
+        $fieldset->description = "Additional custom functions and features to enhance templates and workflows. Documentation can be viewed below,";
         $fieldset->collapsed = Inputfield::collapsedNever;
 
         $fieldset->add([
@@ -271,7 +268,7 @@ class Plates extends WireData implements Module, ConfigurableModule
           'name' => 'add_conditionals_extension',
           'label' => 'Conditionals Extension',
           'label2' => 'Add conditionals extension',
-          'description' => 'Functions that assist with conditional rendering and working with markup.',
+          'description' => 'Functions that assist with conditional markup rendering.',
           'checked' => $this->add_functions_extension,
           'collapsed' => Inputfield::collapsedNever,
           'themeBorder' => 'hide',
@@ -283,7 +280,7 @@ class Plates extends WireData implements Module, ConfigurableModule
           'name' => 'add_embed_extension',
           'label' => 'Embed Extension',
           'label2' => 'Add embed extension',
-          'description' => "Extends reusability with the ability to embed Plates templates with blocks. Combines the features of Plates",
+          'description' => "Embed templates with blocks and capture markup to variables for output.",
           'checked' => $this->add_embed_extension,
           'collapsed' => Inputfield::collapsedNever,
           'themeBorder' => 'hide',
@@ -346,41 +343,73 @@ class Plates extends WireData implements Module, ConfigurableModule
 
         $inputfields->add($fieldset);
 
-        // $fieldset = $modules->InputfieldFieldset;
-        // $fieldset->label = 'Asset Loader Extension Configuration';
-        // $fieldset->description = 'Configure options for loading assets';
-        // $fieldset->showIf = 'add_asset_loader_extension=1';
-        // $fieldset->collapsed = Inputfield::collapsedNever;
+        if (!wire('modules')->isInstalled('TextformatterMarkdownExtra')) {
+            return $inputfields;
+        }
 
-        // $fieldset->add([
-        //   'type' => 'textarea',
-        //   'name' => 'asset_loader_definitions',
-        //   'label' => 'File Definitions',
-        //   'description' => 'Define the locations of assets using arbitrarily named folders.',
-        //   'value' => $this->asset_loader_definitions ?? '',
-        //   'required' => true,
-        //   'requiredIf' => 'add_asset_loader_extension=1',
-        //   'placeholder' => "css::/path/to/assets/here\njs::/path/to/assets/here\nlib::/path/to/assets/here",
-        //   'notes' => 'Format: name::/path/from/root/direcory',
-        //   'collapsed' => Inputfield::collapsedNever,
-        //   'themeBorder' => 'hide',
-        //   'columnWidth' => 100 / 3,
-        // ]);
+        $textFormatterMarkdown = wire('modules')->get('TextFormatterMarkdownExtra');
+        $docsPath = wire('config')->paths->$this . 'Extensions/Documentation/';
 
-        // $fieldset->add([
-        //   'type' => 'checkbox',
-        //   'name' => 'asset_loader_debug_mode',
-        //   'label' => 'Debug Mode',
-        //   'label2' => 'Enable debug mode',
-        //   'description' => 'With debug mode enabled, exceptions will be thrown for unexpected filetypes and files that cannot be found.',
-        //   'notes' => 'Not recommended for use in production',
-        //   'checked' => $this->asset_loader_debug_mode ?? '',
-        //   'collapsed' => Inputfield::collapsedNever,
-        //   'themeBorder' => 'hide',
-        //   'columnWidth' => 100 / 3,
-        // ]);
+        $getMarkup = function(string $file) use ($docsPath, $textFormatterMarkdown) {
+            return $textFormatterMarkdown->markdown(
+                wire('files')->fileGetContents("{$docsPath}{$file}")
+            );
+        };
 
-        // $inputfields->add($fieldset);
+
+        $extensionsDocumentationFile = wire('config')->urls->$this . 'Extensions/Documentation';
+
+        $fieldset = $modules->InputfieldFieldset;
+        $fieldset->label = 'Plates for ProcessWire Extensions Documentation';
+        $fieldset->description = "This information is also available via individual markdown files located in [{$extensionsDocumentationFile}]({$extensionsDocumentationFile})";
+        $fieldset->collapsed = Inputfield::collapsedNever;
+
+        // Conditionals Extension
+        $fieldset->add([
+          'type' => 'InputfieldMarkup',
+          'label' => __('Conditionals Extension'),
+          'value' => $getMarkup('ConditionalsExtension.md'),
+          'collapsed' => Inputfield::collapsedYes,
+          'themeOffset' => 's',
+        ]);
+
+        // Functions Extension
+        $fieldset->add([
+          'type' => 'InputfieldMarkup',
+          'label' => __('Functions Extension'),
+          'value' => $getMarkup('FunctionsExtension.md'),
+          'collapsed' => Inputfield::collapsedYes,
+          'themeOffset' => 's',
+        ]);
+
+        // Asset Loader Extension
+        $fieldset->add([
+          'type' => 'InputfieldMarkup',
+          'label' => __('Asset Loader Extension'),
+          'value' => $getMarkup('AssetLoaderExtension.md'),
+          'collapsed' => Inputfield::collapsedYes,
+          'themeOffset' => 's',
+        ]);
+
+        // Embed Extension
+        $fieldset->add([
+          'type' => 'InputfieldMarkup',
+          'label' => __('Embed Extension'),
+          'value' => $getMarkup('EmbedExtension.md'),
+          'collapsed' => Inputfield::collapsedYes,
+          'themeOffset' => 's',
+        ]);
+
+        // Wire Extension
+        $fieldset->add([
+          'type' => 'InputfieldMarkup',
+          'label' => __('Wire Extension'),
+          'value' => $getMarkup('WireExtension.md'),
+          'collapsed' => Inputfield::collapsedYes,
+          'themeOffset' => 's',
+        ]);
+
+        $inputfields->add($fieldset);
 
         return $inputfields;
     }

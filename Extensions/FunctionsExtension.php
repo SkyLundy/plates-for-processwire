@@ -48,7 +48,6 @@ class FunctionsExtension implements ExtensionInterface
     public Engine $engine;
 
     private WireTextTools $wireTextTools;
-
     /**
      * {@inheritdoc}
      */
@@ -64,8 +63,8 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('csv', [$this, 'csv']);
         $engine->registerFunction('detectVideoSvc', [$this, 'detectVideoSvc']);
         $engine->registerFunction('difference', [$this, 'difference']);
-        $engine->registerFunction('divsBy', [$this, 'divsBy']);
         $engine->registerFunction('divisibleBy', [$this, 'divisibleBy']);
+        $engine->registerFunction('divsBy', [$this, 'divsBy']);
         $engine->registerFunction('embedUrl', [$this, 'embedUrl']);
         $engine->registerFunction('eq', [$this, 'eq']);
         $engine->registerFunction('even', [$this, 'even']);
@@ -78,12 +77,12 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('jsonDecodeArray', [$this, 'jsonDecodeArray']);
         $engine->registerFunction('last', [$this, 'last']);
         $engine->registerFunction('length', [$this, 'length']);
+        $engine->registerFunction('linksOut', [$this, 'linksOut']);
         $engine->registerFunction('merge', [$this, 'merge']);
         $engine->registerFunction('nth', [$this, 'nth']);
         $engine->registerFunction('nth1', [$this, 'nth1']);
         $engine->registerFunction('nth1End', [$this, 'nth1End']);
         $engine->registerFunction('nthEnd', [$this, 'nthEnd']);
-        $engine->registerFunction('toObject', [$this, 'toObject']);
         $engine->registerFunction('odd', [$this, 'odd']);
         $engine->registerFunction('product', [$this, 'product']);
         $engine->registerFunction('random', [$this, 'random']);
@@ -93,9 +92,11 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('stripHtml', [$this, 'stripHtml']);
         $engine->registerFunction('sum', [$this, 'sum']);
         $engine->registerFunction('toList', [$this, 'toList']);
+        $engine->registerFunction('toObject', [$this, 'toObject']);
         $engine->registerFunction('truncate', [$this, 'truncate']);
         $engine->registerFunction('unique', [$this, 'unique']);
         $engine->registerFunction('url', [$this, 'url']);
+        $engine->registerFunction('urlIsExternal', [$this, 'urlIsExternal']);
         $engine->registerFunction('vimeoEmbedUrl', [$this, 'vimeoEmbedUrl']);
         $engine->registerFunction('youTubeEmbedUrl', [$this, 'youTubeEmbedUrl']);
     }
@@ -295,6 +296,42 @@ class FunctionsExtension implements ExtensionInterface
         $parameters = array_filter($parameters, fn ($value) => !is_null($value));
 
         return $this->url("https://www.youtube.com/embed/{$videoId}", $parameters);
+    }
+
+    /**
+     * Checks whether the given URL is internal (same domain) or external (other domain)
+     *
+     * Returns null if no URL provided or internal/external state cannot be determined
+     *
+     * @param string|bool $url         URL to check
+     * @param mixed       $returnTrue  Value to return if URL is external
+     * @param mixed       $returnFalse Value to return if URL is internal
+     */
+    public function urlIsExternal(
+        ?string $url = null,
+        mixed $returnTrue = true,
+        mixed $returnFalse = false,
+    ): mixed {
+        if (!$url) {
+            return null;
+        }
+
+        $url = preg_replace('/https?:\/\//', '', $url);
+
+        return !str_starts_with($url, wire('config')->httpHost) ? $returnTrue : $returnFalse;
+    }
+
+    /**
+     * Alias for linkIsExternal()
+     *
+     * @see ConditionalsExtension::linkIsExternal()
+     */
+    public function linksOut(
+        ?string $url,
+        mixed $returnTrue = true,
+        mixed $returnFalse = false
+    ): mixed {
+        return $this->urlIsExternal($url, $returnTrue, $returnFalse);
     }
 
     /**
@@ -598,7 +635,7 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Converts a value to an index array. Associative arrays are returned indexed without keys.
+     * Converts an iterable value to an index array. Associative arrays are returned indexed without keys.
      * @param  iterable $value Array, WireArray, or WireArray derived object
      * @return array
      */
