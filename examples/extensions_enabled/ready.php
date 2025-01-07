@@ -32,3 +32,27 @@ $plates->templates->addFolder('layouts', "{$templatesDir}layouts");
 
 // Add a folder located at /site/templates/views
 $plates->templates->addFolder('views', "{$templatesDir}views");
+
+/**
+ * You can also use ready.php to either register your own custom functions or include a file that
+ * contains function registries. These are accessed in your Plates templates via the `$this` object
+ *
+ * @see https://platesphp.com/engine/functions/
+ */
+
+$plates->templates->registerFunction('appendDate', function(?string $string, string $format = 'j-n-Y') {
+  return "{$string} " . wire('datetime')->date($format);
+});
+
+/**
+ * You can also use ready.php to add custom extensions you write yourself
+ *
+ * @see https://platesphp.com/engine/extensions/
+ */
+
+require_once '/path/to/your/CustomPlatesExtension.php';
+
+// Or if you have configured a namespace
+// use Path\To\Your\CustomPlatesExtension;
+
+$plates->templates->loadExtension(new CustomPlatesExtension());

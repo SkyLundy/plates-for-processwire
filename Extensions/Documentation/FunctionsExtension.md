@@ -8,36 +8,47 @@ Many of these functions are influenced by [Latte Filters](https://latte.nette.or
 
 Most functions are null safe where possible and impressive batchable chains can be created using combinations of these functions and native PHP functions.
 
-## appendChildren
 
-Gets all children and prepends a given Page object or Page found by selector.
+## append
 
-See also: [`withChildren`](#withchildren)
+Appends a one or more values to a string, array, integer, or WireArray
 
 ```php
-<ul>
-  <?php foreach ($this->appendChildren('/') as $topLevelPage): ?>
-    <li>
-      <a href="<?=$topLevelPage->url?>"><?=$topLevelPage->title?></a>
-    </li>
-  <?php endforeach ?>
-</ul>
+<!-- Appends multiple strings. If appending strings, consider string concatenation or interpolation -->
+<?=$this->append('Hello, ', $page->first_name, $page->last_name)?>
 
-<!-- Optional second child page selector -->
-<ul>
-  <?php foreach ($this->appendChildren('template=all_events', 'template=event,featured_event=1') as $eventPage): ?>
-    <li>
-      <a href="<?=$eventPage->url?>"><?=$eventPage->title?></a>
-    </li>
-  <?php endforeach ?>
-</ul>
+<!-- Appends one or more integers and returns an integer, returns 3456 -->
+<?=$this->append(3, 4, 5, 6)?>
 
-<!-- Accepts a page object as the first argument -->
+<!-- Append arrays -->
+<?php foreach ($this->append(['Foo', 'Bar'], ['Fizz', 'Buzz'], ['FooBar', 'FizzBuzz']) as $value): ?>
+    <p><?=$value?></p>
+<?php endforeach ?>
+
+<!-- Mix values, values must be appendable. Appending an array to a string or int will fail -->
+<?php foreach ($this->append(['Foo', 'Bar'], 'Fizz', 4, ['FooBar', 'FizzBuzz']) as $value): ?>
+    <p><?=$value?></p>
+<?php endforeach ?>
+
+<!-- Appending strings to integers will result in placement of zeroes, this returns 404 -->
+<?php foreach ($this->append(4, 'oops', 4) as $value): ?>
+    <p><?=$value?></p>
+<?php endforeach ?>
+```
+
+## batchEach
+
+Extends Plates' `batch()` method to each item in an array
+
+```php
+<?php foreach ($this->batchEach(['hello THERE', ' <div>how are you?</div>'], 'stripHtml|trim|strtolower|ucfirst') as $text): ?>
+    <p><?=$text?></p>
+<?php endforeach ?>
+
+<!-- Process large numbers of field values easily -->
 <ul>
-  <?php foreach ($this->appendChildren($page) as $subnavPage): ?>
-    <li>
-      <a href="<?=$subnavPage->url?>"><?=$subnavPage->title?></a>
-    </li>
+  <?php foreach ($this->batchEach($movies->explode('summary'), 'stripHtml|trim|strtolower|ucfirst') as $text): ?>
+    <li><?=$text?></li>
   <?php endforeach ?>
 </ul>
 ```
@@ -228,9 +239,49 @@ Alias for `nth` function index at 0. See [`nth`](#nth) for type handling and exa
 <p>True first item, nulls removed: <?=$this->first($page->race_results, true)->title?>.</p>
 ```
 
+## flatten
+
+Flattens an array containing arrays. By default flattens only first level of items, second boolean value of true flattens all arrays and descendent arrays.
+
+Will also flatten WireArrays or WireArray derived objects containing WireArrays or WireArray derived objects.
+
+```php
+<!--
+Assuming:
+$words = [
+  'Foo',
+  [
+    'Fizz',
+    'Buzz',
+  ],
+  'Bar',
+  [
+    'FizzBuzz',
+    [
+      'FooBar',
+    ]
+  ]
+];
+-->
+<ul>
+  <?php foreach ($this->flatten($words) as $word): ?>
+    <li><?=$word?></li>
+  <?php endforeach ?>
+</ul>
+
+<!--
+Assuming a WireArray containing two child PageArrays
+-->
+<ul>
+  <?php foreach ($this->flatten($selectedPages) as $selectedPage): ?>
+    <li><?=$page->title?></li>
+  <?php endforeach ?>
+</ul>
+```
+
 ## from1
 
-Reindexes an iterable to start at 1
+Reindexes an iterable to start at index 1
 
 ```php
 <h1>Race Results</h1>
@@ -242,7 +293,7 @@ Reindexes an iterable to start at 1
     </tr>
   </thead>
   <tbody>
-    <?php foreach ($participants as $place => $name): ?>
+    <?php foreach ($this->from1($participants) as $place => $name): ?>
       <tr>
         <td><?=$place?></td>
         <td><?=$name?></td>
@@ -778,7 +829,35 @@ See [embedUrl](#embedurl) to create URLs for Vimeo or YouTube with autodetection
 
 ## withChidren
 
-Alias for [`appendChildren`](#appendchildren)
+Gets all children for and prepends the given Page object or Page found by selector.
+
+```php
+<ul>
+  <?php foreach ($this->appendChildren('/') as $topLevelPage): ?>
+    <li>
+      <a href="<?=$topLevelPage->url?>"><?=$topLevelPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- Optional second child page selector -->
+<ul>
+  <?php foreach ($this->appendChildren('template=all_events', 'template=event,featured_event=1') as $eventPage): ?>
+    <li>
+      <a href="<?=$eventPage->url?>"><?=$eventPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- Accepts a page object as the first argument -->
+<ul>
+  <?php foreach ($this->appendChildren($page) as $subnavPage): ?>
+    <li>
+      <a href="<?=$subnavPage->url?>"><?=$subnavPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+```
 
 ## youTubeEmbedUrl
 

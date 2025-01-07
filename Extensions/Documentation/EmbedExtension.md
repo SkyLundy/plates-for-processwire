@@ -6,7 +6,7 @@ The Plates for ProcessWire embed extension adds more tools for template and comp
 
 Embedding merges the functionality of the `insert()` and `layout()` functions provided by Plates. While some extensibility in Plates relies on [stacking layouts](https://platesphp.com/templates/layouts/), embedding lets you use individual templates with regular variables that act as "sections".
 
-Here is an example of a template containing markup for a modal. The markup is exactly the same as any other template that cam be included using the `insert()` or `fetch()` methods in Plates.
+Here is an example of a template containing markup for a modal. The markup is exactly the same as any other template that can be included using the `insert()` or `fetch()` methods in Plates.
 
 ```php
 <!-- /site/templates/components/modal.plates.php -->
@@ -83,7 +83,7 @@ Another example showing the use of `blockValue()`
 
 ## Capturing
 
-Capturing lets you assign a block of markup to a variable and output as necessary.
+Capturing lets you assign a block of markup to a variable and output as needed.
 
 To begin a capture, assign `$this->capture()` to a variable. End the capture by calling `stop()` or `end()` on that variable.
 

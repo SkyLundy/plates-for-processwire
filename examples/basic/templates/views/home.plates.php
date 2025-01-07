@@ -18,10 +18,12 @@ $this->layout('layouts::main', ['description' => $page->description]);
 </section>
 
 <section>
-  <?php $this->insert('components::image_gallery', [
-    'title' => __('Event Gallery'),
-    'images' => $page->image_gallery
-  ]) ?>
+  <?php if ($page->image_gallery->count()): ?>
+    <?php $this->insert('components::image_gallery', [
+      'title' => __('Event Gallery'),
+      'images' => $page->image_gallery
+    ]) ?>
+  <?php endif ?>
 </section>
 
 <section>

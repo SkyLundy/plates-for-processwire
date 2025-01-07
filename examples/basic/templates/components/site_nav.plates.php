@@ -1,9 +1,12 @@
 <?php namespace ProcessWire;
+/**
+ * @property string|null $basePageSelector
+ */
 
-$rootPage = $pages->get('/');
+$basePage = $pages->get($basePageSelector ?? '/');
 ?>
 <ul>
-  <?php foreach ($rootPage->children->prepend($rootPage) as $navPage): ?>
+  <?php foreach ($basePage->children->prepend($basePage) as $navPage): ?>
     <?php $this->insert('components::site_nav_item', ['navPage' => $navPage]) ?>
   <?php endforeach ?>
 </ul>

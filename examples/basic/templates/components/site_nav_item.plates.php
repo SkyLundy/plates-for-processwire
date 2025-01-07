@@ -9,7 +9,6 @@
   <a href="<?=$navPage->url?>" class="<?=$navPage->id === $page->id ? 'active' : ''?>">
     <?=$navPage->title?>
   </a>
-
   <?php if ($navPage->id !== 1 && count($navPage->children)): ?>
     <ul>
       <?php foreach ($navPage->numChildren() as $childPage): ?>

@@ -45,6 +45,9 @@ class ConditionalsExtension implements ExtensionInterface
         $engine->registerFunction('matchInt', [$this, 'matchInt']);
         $engine->registerFunction('matchStr', [$this, 'matchStr']);
         $engine->registerFunction('matchTrue', [$this, 'matchTrue']);
+        $engine->registerFunction('pageIs', [$this, 'pageIs']);
+        $engine->registerFunction('paramIs', [$this, 'paramIs']);
+        $engine->registerFunction('pathIs', [$this, 'pathIs']);
         $engine->registerFunction('switch', [$this, 'switch']);
         $engine->registerFunction('tagIf', [$this, 'tagIf']);
         $engine->registerFunction('wrapIf', [$this, 'wrapIf']);
@@ -108,6 +111,17 @@ class ConditionalsExtension implements ExtensionInterface
     }
 
     /**
+     * Checks if current page matches the provided page, returns a boolean
+     *
+     * @param  Page|null  $page Page to check against current page
+     * @return bool
+     */
+    public function pageIs(?Page $page): bool
+    {
+        return $this->ifPage($page, true, false);
+    }
+
+    /**
      * Checks if the given page is the current page and returns a string attribute with value
      * @param  Page|null   $page       Page to check
      * @param  string      $attr       Attribute to set
@@ -121,7 +135,7 @@ class ConditionalsExtension implements ExtensionInterface
         mixed $valueTrue = null,
         mixed $valueFalse = null,
     ): ?string {
-        return $this->attrIf($this->ifPage($page), $attr, $valueTrue, $valueFalse);
+        return $this->attrIf($this->pageIs($page), $attr, $valueTrue, $valueFalse);
     }
 
     /**
@@ -156,6 +170,16 @@ class ConditionalsExtension implements ExtensionInterface
     }
 
     /**
+     * Checks if the provided page path matches the current page path
+     * @param  ?string $path Path to check against current path
+     * @return bool
+     */
+    public function pathIs(?string $path): bool
+    {
+        return $this->ifPath($path, true, false);
+    }
+
+    /**
      * Checks if the provided GET parameter exists in the URL and has the expected value. Passing a
      * boolean second argument will check if the parameter does or does not exist. Third and forth
      * arguments are values returned if check passes or fails respectively
@@ -178,6 +202,17 @@ class ConditionalsExtension implements ExtensionInterface
             false => !$urlParamValue ? $returnTrue : $returnFalse,
             default => $parameterValue == $urlParamValue ? $returnTrue : $returnFalse,
         };
+    }
+
+    /**
+     * Checks if a parameter exists and has the expected value
+     * @param  string $urlParameter   Parameter to check for
+     * @param  string $parameterValue Parameter value to check for
+     * @return bool
+     */
+    public function paramIs(?string $urlParameter, mixed $parameterValue): bool
+    {
+        return $this->ifParam($urlParameter, $parameterValue);
     }
 
     /**

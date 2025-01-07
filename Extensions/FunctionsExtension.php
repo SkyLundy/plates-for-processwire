@@ -38,8 +38,9 @@ use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
 use LogicException;
-use ProcessWire\{Page, PageArray, WireArray, WireNull, WireTextTools};
+use ProcessWire\{Page, PageArray, WireArray, WireException, WireNull, WireTextTools};
 use stdClass;
+use Stringable;
 
 use function ProcessWire\wire;
 
@@ -56,7 +57,7 @@ class FunctionsExtension implements ExtensionInterface
         $this->engine = $engine;
         $this->wireTextTools = new WireTextTools();
 
-        $engine->registerFunction('appendChildren', [$this, 'appendChildren']);
+        $engine->registerFunction('append', [$this, 'append']);
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
         $engine->registerFunction('batchEach', [$this, 'batchEach']);
         $engine->registerFunction('bit', [$this, 'bit']);
@@ -72,6 +73,7 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('falseToNull', [$this, 'falseToNull']);
         $engine->registerFunction('filterWireNull', [$this, 'filterWireNull']);
         $engine->registerFunction('first', [$this, 'first']);
+        $engine->registerFunction('flatten', [$this, 'flatten']);
         $engine->registerFunction('from1', [$this, 'from1']);
         $engine->registerFunction('group', [$this, 'group']);
         $engine->registerFunction('isWireArray', [$this, 'isWireArray']);
@@ -85,6 +87,7 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('nth1End', [$this, 'nth1End']);
         $engine->registerFunction('nthEnd', [$this, 'nthEnd']);
         $engine->registerFunction('odd', [$this, 'odd']);
+        $engine->registerFunction('prepend', [$this, 'prepend']);
         $engine->registerFunction('product', [$this, 'product']);
         $engine->registerFunction('random', [$this, 'random']);
         $engine->registerFunction('reverse', [$this, 'reverse']);
@@ -658,7 +661,7 @@ class FunctionsExtension implements ExtensionInterface
      * @param  string|null $childSelector  Optional child page selector
      * @return PageArray
      */
-    public function appendChildren(
+    public function withChildren(
         Page|int|string $parentSelector,
         ?string $childSelector = null
     ): PageArray {
@@ -671,21 +674,9 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
-     * Alias for appendChildren()
-     *
-     * @see FunctionsExtension::appendChildren()
-     */
-    public function withChildren(
-        Page|int|string $parentSelector,
-        ?string $childSelector = null
-    ): PageArray {
-        return $this->appendChildren($parentSelector, $childSelector);
-    }
-
-    /**
      * Arrays/WireArrays/Strings
      *
-     * Assistants that work with either arrays or arrays and strings
+     * Assistants that work with multiple value types
      */
 
     /**
@@ -1039,6 +1030,82 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
+     * Flattens a multidimensional array, WireArray, or WireArray derived object, null safe. Null
+     * returns empty array
+     *
+     * @param  array|WireArray|null  $array Array or WireArray to flatten
+     * @param  bool                  $deep  False flattens first level of nested arrays, true flattens all
+     * @return array
+     */
+    public function flatten(array|WireArray|null $array): array|WireArray
+    {
+        if (is_null($array)) {
+            return [];
+        }
+
+        $value = $array;
+
+        $isWireArray = $this->isWireArray($array);
+
+        $isWireArray && $value = $array->getArray();
+
+        $result = array_reduce($value, function($out, $item) {
+            if (is_array($item) || $this->isWireArray($item)) {
+                $item = $this->flatten($item);
+            }
+
+            return is_array($item) ? [...$out, ...$item] : [...$out, $item];
+        }, []);
+
+        return $isWireArray ? (new WireArray())->import($result) : $result;
+    }
+
+    /**
+     * Append a value to a string, int, array, or WireArray. Null safe,
+     * @return mixed
+     */
+    public function append(mixed $appendTo, mixed ...$values): mixed
+    {
+        if (is_null($appendTo)) {
+            return null;
+        }
+
+        if ($this->isWireArray($appendTo)) {
+            return $appendTo->add(...$values);
+        }
+
+        $appendToType = gettype($appendTo);
+
+        return match ($appendToType) {
+            'array' => $this->appendArray($appendTo, $values),
+            'string' => $this->appendString($appendTo, $values),
+            'integer' => $this->appendInt($appendTo, $values),
+            default => throw new LogicException("Cannot prepend value to item of type {$appendToType}"),
+        };
+    }
+
+    /**
+     * Append a value to a string, int, array, or WireArray. Null safe
+     * @return mixed
+     */
+    public function prepend(mixed $prependTo, mixed ...$values): mixed
+    {
+        if (is_null($prependTo)) {
+            return null;
+        }
+
+        if ($this->isWireArray($prependTo)) {
+            return $prependTo->prepend(...$values);
+        }
+
+        $reversed = $this->reverse($prependTo);
+
+        $appended = $this->append($reversed, $values);
+
+        return $this->reverse($appended);
+    }
+
+    /**
      * Adds all of the values in an array, list array by index, associative array by key, array of
      * stdClass objects by property, or a WireArray by property. Null safe.
      *
@@ -1113,6 +1180,10 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
+     * Misc
+     */
+
+    /**
      * Helper method to check if a value is a WireArray instance
      * @param  mixed   $value Value to check
      * @return bool
@@ -1121,6 +1192,10 @@ class FunctionsExtension implements ExtensionInterface
     {
         return is_a($value, WireArray::class, true);
     }
+
+    /**
+     * Internals
+     */
 
     /**
      * Executes a simple math operation on the provided object. Null and empty strings are counted
@@ -1202,5 +1277,55 @@ class FunctionsExtension implements ExtensionInterface
 
             return $total = eval('return ' . "{$total}{$operator}{$parsedValue}" . ';');
         }, $initialValue);
+    }
+
+
+    /**
+     * Append helper methods
+     */
+
+    private function appendArray(array $appendTo, mixed ...$values): array
+    {
+        return array_reduce($values[0], function($out, $value) {
+            return $out = is_array($value) ? [...$out, ...$value] : [...$out, $value];
+        }, $appendTo);
+    }
+
+    private function appendString(string $appendTo, mixed ...$values): string
+    {
+        return array_reduce($values[0], function($out, $value) {
+            if (
+                is_string($value) ||
+                is_int($value) ||
+                is_float($value)
+            ) {
+                return $out . (string) $value;
+            }
+
+            if (is_array($value)) {
+                return $out = $this->appendString($out, $value);
+            }
+
+            if (!$value instanceof Stringable) {
+                $valueType = gettype($value);
+
+                throw new LogicException("Cannot append a value of type {$valueType} to a string");
+            }
+
+            return $out . (string) $value;
+        }, $appendTo);
+    }
+
+    private function appendInt(int $appendTo, mixed ...$values): int
+    {
+        return array_reduce($values[0], function($out, $value) {
+            if (is_array($value)) {
+                return $out = $this->appendInt($out, $value);
+            }
+
+            $castValue = (int) $value;
+
+            return (int) "{$out}{$castValue}";
+        }, $appendTo);
     }
 }
