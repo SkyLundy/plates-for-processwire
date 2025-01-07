@@ -13,9 +13,9 @@ use League\Plates\Extension\ExtensionInterface;
 use LogicException;
 use ProcessWire\Page;
 use ProcessWire\WireArray;
+use ProcessWire\WireTextTools;
 
 use function ProcessWire\wire;
-use function ProcessWire\WireArray;
 
 class ConditionalsExtension implements ExtensionInterface
 {
@@ -35,6 +35,7 @@ class ConditionalsExtension implements ExtensionInterface
         $engine->registerFunction('if', [$this, 'if']);
         $engine->registerFunction('ifEq', [$this, 'ifEq']);
         $engine->registerFunction('ifPage', [$this, 'ifPage']);
+        $engine->registerFunction('attrIfPage', [$this, 'attrIfPage']);
         $engine->registerFunction('ifParam', [$this, 'ifParam']);
         $engine->registerFunction('ifPath', [$this, 'ifPath']);
         $engine->registerFunction('ifTag', [$this, 'ifTag']);
@@ -46,6 +47,7 @@ class ConditionalsExtension implements ExtensionInterface
         $engine->registerFunction('matchTrue', [$this, 'matchTrue']);
         $engine->registerFunction('switch', [$this, 'switch']);
         $engine->registerFunction('tagIf', [$this, 'tagIf']);
+        $engine->registerFunction('wrapIf', [$this, 'wrapIf']);
     }
 
     /**
@@ -78,14 +80,13 @@ class ConditionalsExtension implements ExtensionInterface
         mixed $if,
         mixed $match,
         mixed $returnTrue = true,
-        mixed $returnFalse = false,
         bool $strict = true
     ): mixed {
         if ($strict) {
-            return $this->if($if === $match, $returnTrue, $returnFalse);
+            return $this->if($if === $match, $returnTrue, null);
         }
 
-        return $this->if($if == $match, $returnTrue, $returnFalse);
+        return $this->if($if == $match, $returnTrue, null);
     }
 
     /**
@@ -104,6 +105,23 @@ class ConditionalsExtension implements ExtensionInterface
         $isCurrentPage = wire('page')->id === $page?->id;
 
         return $isCurrentPage ? $returnTrue : $returnFalse;
+    }
+
+    /**
+     * Checks if the given page is the current page and returns a string attribute with value
+     * @param  Page|null   $page       Page to check
+     * @param  string      $attr       Attribute to set
+     * @param  mixed|null $valueTrue   Attribute value if true
+     * @param  mixed|null $valueFalse  Attribute value if false
+     * @return string|null
+     */
+    public function attrIfPage(
+        ?Page $page,
+        string $attr,
+        mixed $valueTrue = null,
+        mixed $valueFalse = null,
+    ): ?string {
+        return $this->attrIf($this->ifPage($page), $attr, $valueTrue, $valueFalse);
     }
 
     /**
@@ -219,15 +237,11 @@ class ConditionalsExtension implements ExtensionInterface
      */
     public function fetchIf(string $name, mixed $conditional = null, array $data = []): ?string
     {
-        $isWireArray = is_a($conditional, WireArray::class, true);
-
-        if ($isWireArray && !$conditional->count()) {
-            return null;
+        if (is_a($conditional, WireArray::class, true)) {
+            $conditional = $conditional->count();
         }
 
-        if (!!$conditional) {
-            return $this->template->fetch($name, $data);
-        }
+        return !!$conditional ? $this->template->fetch($name, $data) : null;
     }
 
     /**
@@ -396,7 +410,7 @@ class ConditionalsExtension implements ExtensionInterface
             return null;
         }
 
-        if ($conditional && !$valueTrue && !$valueFalse) {
+        if (!!$conditional && !$valueTrue && !$valueFalse) {
             return $attr;
         }
 
@@ -409,5 +423,33 @@ class ConditionalsExtension implements ExtensionInterface
         if ($value) {
             return " {$attr}=\"{$value}\"";
         }
+    }
+
+    /**
+     * Wraps a value in a given tag if the conditional is truthy, optional fallback tag may be
+     * provided. If conditional is falsey and no fallback tag is provided, the value is returned
+     * without additional markup
+     *
+     * @param  mixed       $conditional Value to test truthiness of
+     * @param  string      $value       Value to wrap
+     * @param  string      $tag         Tag to wrap if conditional is truthy
+     * @param  string|null $fallbackTag Optional tag to wrap if falsey
+     * @return mixed
+     */
+    public function wrapIf(
+        mixed $conditional,
+        string $value,
+        string $tag,
+        ?string $fallbackTag = null
+    ): mixed {
+        if (!$conditional && !$fallbackTag) {
+            return $value;
+        }
+
+        $wireTextTools = new WireTextTools();
+
+        $openingTag = !!$conditional ? $tag : $fallbackTag;
+
+        return $wireTextTools->fixUnclosedTags("{$openingTag}{$value}", false);
     }
 }

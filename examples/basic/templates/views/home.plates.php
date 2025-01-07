@@ -5,12 +5,10 @@ $this->layout('layouts::main', ['description' => $page->description]);
 <?php $this->start('hero') ?>
   <h1><?=$page->headline?></h1>
 
-  <?php if ($page->headline2): ?>
-    <h2><?=$page->headline2?></h2>
-  <?php endif ?>
+  <?=$page->headline2 ? "<h2>{$page->headline2}</h2>" : null?>
 <?php $this->end() ?>
 
-<section class="introduction">
+<section>
   <div class="text-content">
     <?=$page->body?>
   </div>
@@ -19,29 +17,26 @@ $this->layout('layouts::main', ['description' => $page->description]);
   </div>
 </section>
 
-<section class="event-images">
+<section>
   <?php $this->insert('components::image_gallery', [
     'title' => __('Event Gallery'),
     'images' => $page->image_gallery
   ]) ?>
 </section>
 
-<section class="about-us">
-  <div class="text-content">
-    <?=$page->body2?>
-  </div>
+<section>
   <ul class="team-members">
     <?php foreach ($pages->get('template=team')->children as $person): ?>
       <li>
-        <span>Name: <?=$this->batch($person->title, 'trim|strtolower|ucwords')?></span>
-        <span>Title: <?=$this->batch($person->job_title, 'trim|strtolower|ucwords')?></span>
-        <span>Bio: <?=$sanitizer->markupToText(trim($person->bio))?></span>
+        <span><?=__('Name')?>: <?=$this->batch($person->title, 'trim|strtolower|ucwords')?></span>
+        <span><?=__('Title')?>: <?=$this->batch($person->job_title, 'trim|strtolower|ucwords')?></span>
+        <span><?=__('Bio')?>: <?=$sanitizer->markupToText(trim($person->bio))?></span>
       </li>
     <?php endforeach ?>
   </ul>
 </section>
 
-<section class="contest-winners">
+<section>
   <h2><?=__('Congratulations To Our Contest Winners')?></h2>
   <ul>
     <?php foreach ($page->contest_winners as $image): ?>

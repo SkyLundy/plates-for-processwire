@@ -7,6 +7,7 @@
  * @property string|null $description Meta description
  *
  * $this->if() - Provided by Conditionals extension
+ * $this->preloadAssets() - Provided by Asset Loader extension
  * $this->preloadAsset() - Provided by Asset Loader extension
  * $this->linkAsset() - Provided by Asset Loader extension
  * $this->inlineAsset() - Provided by Asset Loader extension
@@ -19,8 +20,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?=$title ?? $page->title;?></title>
     <?=$this->if($description ?? false, "<meta name='description' content='{$description}'>")?>
-    <?=$this->preloadAsset('fonts::ProximaNova.woff2')?>
-    <?=$this->preloadAsset('fonts::ProximaNovaLight.woff2')?>
+    <?=$this->preloadAssets([
+      'fonts::ProximaNova.woff2',
+      'fonts::ProximaNovaLight.woff2',
+    ])?>
     <?=$this->preloadAsset('js::app.js')?>
     <?=$this->linkAsset('styles::app.css')?>
     <?=$this->inlineAsset('styles::critical.css')?>
@@ -28,7 +31,7 @@
   <body>
     <header class="site-header">
       <a href="<?=$pages->get('/')->url?>">
-        <img src="<?=$config->paths->templates?>images/logo.jpg" alt="Our Logo">
+        <img src="<?=$config->paths->templates?>images/logo.jpg" alt="<?=__('Our Logo')?>">
       </a>
       <nav>
         <?php $this->insert('components::site_nav'); ?>

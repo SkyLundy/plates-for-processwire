@@ -1,4 +1,4 @@
-# Plates for ProcessWire - Advanced Example
+# Plates for ProcessWire - Extensions Enabled
 
 This example shows usage of both core Plates features along with additional functionality available via the optional extensions that can be enabled on the Plates for ProcessWire module config page.
 

@@ -21,6 +21,33 @@ Note that the space before the opening `<?=` is ommitted. Attributes are automat
 <div<?=$this->attrIf($page->show_chart, 'data-chart-json', $page->chart_json, '{}')></div>
 ```
 
+## attrIfPage
+
+Checks whether a page passed as the first argument is the current page. If true, outputs the attribute passed as the second argument. Third and fourth arguments are values to output if is or is not current page respectively.
+
+See also: [`attrIf`](#attrif)
+See also: [`ifPage`](#ifPage)
+
+```php
+<ul>
+  <?php foreach ($pageArray as $thisPage): ?>
+    <li <?=$this->attrIfPage($thisPage, 'class', 'active')>
+      <a href='<?=$thisPage->url?>'><?=$thisPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- With all arguments -->
+<ul>
+  <?php foreach ($pageArray as $thisPage): ?>
+    <li <?=$this->attrIfPage($thisPage, 'class', 'active', 'inactive')>
+      <a href='<?=$thisPage->url?>'><?=$thisPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+```
+
 ## fetchIf
 
 Extends the native Plates `fetch` method with an added conditional. Second conditional argument is any value or type checked for truthiness. If truthy, inserts the named template, otherwise no action is taken. If the conditional argument is a WireArray or WireArray derived object, the template will only render if it contains items.
@@ -67,7 +94,7 @@ Arguments and values returned may be of any type.
 
 ## ifEq
 
-Version of [if](#if) that outputs a single value if the first argument matches the second argument weakly compared. Returns null otherwise. Pass `true` as the fourth argument for strict comparison.
+Version of [if](#if) that outputs a single value if the first argument matches the second argument strictly compared. Returns null otherwise. Pass `false` as the fourth argument for weak comparison.
 
 Arguments and values returned may be of any type
 
@@ -78,8 +105,8 @@ Arguments and values returned may be of any type
     <input type="text" class="required">
 </label>
 
-<!-- 4th argument true forces strict === comparison -->
-<input type="text" value="<?=$this->ifEq($somethingNull, '0', 'Will not output', true)?>">
+<!-- 4th argument true forces weak == comparison -->
+<?=$this->ifEq($somethingNull, '0', 'Close enough', false)?>
 ```
 
 ## ifPage
@@ -100,23 +127,29 @@ Checks if the current page matches the provided page. Optional second argument w
 
 ## ifParam
 
-Checks for a specified GET parameter for a specified value in the current URL. Omitting the expected value will check that the parameter exists.
+Checks for a specified GET parameter, and optionally for a specified value in the current URL. Omitting an expected value will check that the parameter exists regardless of value.
 
 ```php
+<!-- https://somewebsite.com/?foo=bar returns true -->
 <?php if ($this->ifParam('foo', 'bar')): ?>
   <p>The parameter 'foo' is present in the current URL and has a value of 'bar'</p>
 <?php endif ?>
 
+<!-- https://somewebsite.com/?foo=bar returns 'yes' -->
 <p>Is the parameter 'foo' present in the current URL with a value of 'bar'? <?=$this->ifParam('foo', 'bar', 'yes', 'no')?></p>
 
+<!-- https://somewebsite.com/?foo=foobar returns 'no' -->
+<p>Is the parameter 'foo' present in the current URL with a value of 'bar'? <?=$this->ifParam('foo', 'bar', 'yes', 'no')?></p>
+
+<!-- https://somewebsite.com/?foo=foobar returns 'true' -->
 <?php if ($this->ifParam('foo')): ?>
   <p>The parameter 'foo' is present in the current URL</p>
 <?php endif ?>
 
-<?php if ($this->ifParam('foo', true)): ?>
-  <p>The parameter 'foo' is present in the current URL</p>
-<?php endif ?>
+<!-- https://somewebsite.com/?foo=foobar - Passing second value as true checks if parameter exists regardless of value and returns the third parameter -->
+<?=$this->ifParam('foo', true, "<p>The parameter 'foo' is present in the current URL</p>")?>
 
+<!-- https://somewebsite.com/?fizz=buzz - Passing second value as true checks if parameter exists regardless of value -->
 <?php if ($this->ifParam('foo', false)): ?>
   <p>The parameter 'foo' is not present in the current URL</p>
 <?php endif ?>
@@ -124,19 +157,60 @@ Checks for a specified GET parameter for a specified value in the current URL. O
 
 ## ifPath
 
-Checks if the current page matches the provided page. Optional second argument will be the value returned if the page passed matches the current page. Third argument is the value returned if the page is not a match. Returns a boolean by default.
+Checks if the current URL path matches the provided URL path. Optional second argument will be the value returned if the page passed matches the current page. Optional third argument is the value returned if the page is not a match. Returns a boolean if only one argument is passed.
+
+Ignores leading/trailing slashes, ignores GET parameters
 
 ```php
-<ul>
-  <?php foreach ($listOfPages as $navPage): ?>
-    <li>
-      <a href="<?=$navPage->url?>" class="<?=$this->ifPage($navPage, 'active')?>">
-        <?=$navPage->title?>
-      </a>
-    </li>
-  <?php endforeach ?>
-</ul>
+<!-- https://somewebsite.com/  Returns true -->
+<?php if ($this->ifPath('/')): ?>
+  <p>Welcome home!</p>
+<?php endif ?>
+
+<!-- https://somewebsite.com/somewwhere/else Returns 'Goodbye...' -->
+<p><?=$this->ifPath('/hello', 'Hello!', 'Goodbye...')?></p>
 ```
+
+## ifUrl
+
+Checks if the current URL matches the provided URL. Optional second argument will be the value returned if the URL matches the current URL. Optional third argument is the value returned if the page is not a match. Returns a boolean if only one argument is passed.
+
+Ignores leading/trailing slashes, ignores GET parameters. URL protocol must match, subdomains must match.
+
+```php
+<!-- https://somewebsite.com/  Returns true -->
+<?php if ($this->ifUrl('https://somewebsite.com/')): ?>
+  <p>Welcome home!</p>
+<?php endif ?>
+
+<!-- https://somewebsite.com/somewwhere/else Returns 'Not a match' -->
+<p><?=$this->ifUrl('https://somewebsite.com/somewwhere/else', 'Match!', 'Not a match')?></p>
+
+<!-- https://somewebsite.com/hello Protocol doesn't match, returns 'Oops' -->
+<p><?=$this->ifPath('http://somewebsite.com/hello', 'All good!', 'Oops')?></p>
+
+<!-- https://somewebsite.com Protocol doesn't match, returns 'Whoa there, wrong subdomain' -->
+<p><?=$this->ifPath('https://look.somewebsite.com', 'Winner!', 'Whoa there, wrong subdomain')?></p>
+```
+
+
+## ifPath
+
+Checks if the current URL path matches the provided URL path. Optional second argument will be the value returned if the page passed matches the current page. Optional third argument is the value returned if the page is not a match. Returns a boolean if only one argument is passed.
+
+Ignores leading/trailing slashes, ignores GET parameters
+
+```php
+<!-- https://somewebsite.com/  Returns true -->
+<?php if ($this->ifPath('/')): ?>
+  <p>Welcome home!</p>
+<?php endif ?>
+
+<!-- https://somewebsite.com/somewwhere/else Returns 'Not home yet...' -->
+<p><?=$this->ifPath('/', 'Welcome home!', 'Not home yet...')?></p>
+```
+
+
 
 ## insertIf
 
@@ -198,4 +272,35 @@ Outputs one of two tags depending on the truthiness of the first argument with a
 <<?=$this->tagIf($page->headline, 'h3', 'h2'?> class="text-neutral-500">
     <?=$page->text?>
 </<?=$this->tagIf()?>>
+```
+
+## wrapIf
+
+Wraps a value in a given tag if the conditional is truthy, optional fallback tag may be provided. If conditional is falsey and no fallback tag is provided, the value is returned without additional markup.
+
+The tag provided must be closable and may contain any attributes desired. Tags provided must be proper syntax with opening and closing angle brackets.
+
+```php
+<!-- Creates a link for every page that is not the current page -->
+<ul>
+  <?php foreach ($pageArray as $thisPage): ?>
+    <li>
+      <?=$this->wrapIf($page->id === $thisPage->id, $thisPage->title, "<a href='{$thisPage->url}'>")?>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- Creates a link for every page that is not the current page, the current page is wrapped in a <span>, combine with ifPage() -->
+<ul>
+  <?php foreach ($pageArray as $thisPage): ?>
+    <li>
+      <?=$this->wrapIf(
+        !$this->ifPage($thisPage),
+        $thisPage->title,
+        "<a href='{$thisPage->url}'>",
+        "<span class='current'>"
+    )?>
+    </li>
+  <?php endforeach ?>
+</ul>
 ```

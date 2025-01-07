@@ -38,7 +38,7 @@ use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
 use LogicException;
-use ProcessWire\{WireArray, WireNull, WireTextTools};
+use ProcessWire\{Page, PageArray, WireArray, WireNull, WireTextTools};
 use stdClass;
 
 use function ProcessWire\wire;
@@ -56,6 +56,7 @@ class FunctionsExtension implements ExtensionInterface
         $this->engine = $engine;
         $this->wireTextTools = new WireTextTools();
 
+        $engine->registerFunction('appendChildren', [$this, 'appendChildren']);
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
         $engine->registerFunction('batchEach', [$this, 'batchEach']);
         $engine->registerFunction('bit', [$this, 'bit']);
@@ -98,6 +99,7 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('url', [$this, 'url']);
         $engine->registerFunction('urlIsExternal', [$this, 'urlIsExternal']);
         $engine->registerFunction('vimeoEmbedUrl', [$this, 'vimeoEmbedUrl']);
+        $engine->registerFunction('withChildren', [$this, 'withChildren']);
         $engine->registerFunction('youTubeEmbedUrl', [$this, 'youTubeEmbedUrl']);
     }
 
@@ -649,6 +651,38 @@ class FunctionsExtension implements ExtensionInterface
     }
 
     /**
+     * Given a parent page or parent page selector, gets children, prepends parent page, and returns
+     * a new PageArray. Optional child page selector may be provided to select/filter children
+     *
+     * @param  Page|string $parentSelector Parent page or parent page selector
+     * @param  string|null $childSelector  Optional child page selector
+     * @return PageArray
+     */
+    public function appendChildren(
+        Page|int|string $parentSelector,
+        ?string $childSelector = null
+    ): PageArray {
+        $parentPage = match (true) {
+            is_a($parentSelector, Page::class, true) => $parentSelector,
+            default => wire('pages')->get($parentSelector),
+        };
+
+        return $parentPage->children($childSelector ?? '')->prepend($parentPage);
+    }
+
+    /**
+     * Alias for appendChildren()
+     *
+     * @see FunctionsExtension::appendChildren()
+     */
+    public function withChildren(
+        Page|int|string $parentSelector,
+        ?string $childSelector = null
+    ): PageArray {
+        return $this->appendChildren($parentSelector, $childSelector);
+    }
+
+    /**
      * Arrays/WireArrays/Strings
      *
      * Assistants that work with either arrays or arrays and strings
@@ -1085,7 +1119,7 @@ class FunctionsExtension implements ExtensionInterface
      */
     public function isWireArray(mixed $value): bool
     {
-        return is_a($value, WireArray::class, true);;
+        return is_a($value, WireArray::class, true);
     }
 
     /**

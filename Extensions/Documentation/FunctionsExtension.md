@@ -8,6 +8,40 @@ Many of these functions are influenced by [Latte Filters](https://latte.nette.or
 
 Most functions are null safe where possible and impressive batchable chains can be created using combinations of these functions and native PHP functions.
 
+## appendChildren
+
+Gets all children and prepends a given Page object or Page found by selector.
+
+See also: [`withChildren`](#withchildren)
+
+```php
+<ul>
+  <?php foreach ($this->appendChildren('/') as $topLevelPage): ?>
+    <li>
+      <a href="<?=$topLevelPage->url?>"><?=$topLevelPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- Optional second child page selector -->
+<ul>
+  <?php foreach ($this->appendChildren('template=all_events', 'template=event,featured_event=1') as $eventPage): ?>
+    <li>
+      <a href="<?=$eventPage->url?>"><?=$eventPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- Accepts a page object as the first argument -->
+<ul>
+  <?php foreach ($this->appendChildren($page) as $subnavPage): ?>
+    <li>
+      <a href="<?=$subnavPage->url?>"><?=$subnavPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+```
+
 ## batchArray
 
 Alias for [`batchEach`](#batcheach)
@@ -218,7 +252,6 @@ Reindexes an iterable to start at 1
 </table>
 ```
 
-
 ## group
 
 Groups an array of objects by property or array of arrays by key, also works with WireArray and WireArray derived objects. Returns an array keyed by specified property/key
@@ -268,6 +301,17 @@ $people = [
     </ul>
   </div>
 <?php endforeach ?>
+```
+
+## isRoot
+
+Checks if a given page is the root page, if no page is provided then checks if the current page is the root page
+
+```php
+<?=$this->isRoot($page) ? 'Welcome home!' : 'Not home yet...'?>
+
+<!-- Omit the page to check if the current page is root -->
+<?=$this->isRoot() ? 'Welcome home!' : 'Not home yet...'?>
 ```
 
 ## isWireArray
@@ -731,6 +775,10 @@ See [embedUrl](#embedurl) to create URLs for Vimeo or YouTube with autodetection
 <!-- Vimeo URL. Appends default parameters included by Vimeo when copying the embed code from a video, may be removed by passing the parameter with a null value in the second argument -->
 <iframe src="<?=$this->embedUrl('https://vimeo.com/2039264832', ['autoplay' => 1])?>" frameborder="0" allow="autoplay; fullscreen; picture-in-picture; clipboard-write"></iframe>
 ```
+
+## withChidren
+
+Alias for [`appendChildren`](#appendchildren)
 
 ## youTubeEmbedUrl
 

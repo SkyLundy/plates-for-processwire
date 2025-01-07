@@ -27,7 +27,7 @@
   <body>
     <header class="site-header">
       <a href="<?=$pages->get('/')->url?>">
-        <img src="<?=$config->paths->templates?>images/logo.jpg" alt="Our Logo">
+        <img src="<?=$config->paths->templates?>images/logo.jpg" alt="<?=__('Our Logo')?>">
       </a>
       <nav>
         <?php $this->insert('components::site_nav'); ?>
