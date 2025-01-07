@@ -7,7 +7,7 @@ namespace ProcessWire;
 use League\Plates\Engine;
 use League\Plates\Template\Template;
 use League\Plates\Extension\{Asset, URI};
-use Plates\Extensions\{
+use PlatesForProcessWire\Extensions\{
     AssetLoaderExtension,
     EmbedExtension,
     ConditionalsExtension,
@@ -48,11 +48,15 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
      */
     public function init()
     {
-        // CHECK IF Plates COMPOSER MODULE IS INSTALLED
+        // Check if Plates is already loaded from another source
+        if (!class_exists(Engine::class)) {
+            require_once "{$this->wire->config->paths->$this}vendor/autoload.php";
+        }
+
 
         $this->wire->set('plates', $this);
 
-        $this->wire('classLoader')->addNamespace('Plates\Extensions', __DIR__ . '/Extensions');
+        $this->wire('classLoader')->addNamespace('PlatesForProcessWire\Extensions', __DIR__ . '/Extensions');
 
         $this->templates = $this->initialize();
     }

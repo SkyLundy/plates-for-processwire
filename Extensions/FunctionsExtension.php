@@ -31,14 +31,14 @@
 
 declare(strict_types=1);
 
-namespace Plates\Extensions;
+namespace PlatesForProcessWire\Extensions;
 
 use InvalidArgumentException;
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
 use LogicException;
-use ProcessWire\{Page, PageArray, WireArray, WireException, WireNull, WireTextTools};
+use ProcessWire\{Page, PageArray, WireArray, WireNull, WireTextTools};
 use stdClass;
 use Stringable;
 

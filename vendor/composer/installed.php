@@ -1,0 +1,41 @@
+<?php return array(
+    'root' => array(
+        'name' => 'firewire/plates-for-processwire',
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '7073fb0e75e29e4122a881e4f3ebc635e4fe40b0',
+        'type' => 'pw-module',
+        'install_path' => __DIR__ . '/../../',
+        'aliases' => array(),
+        'dev' => true,
+    ),
+    'versions' => array(
+        'composer/installers' => array(
+            'pretty_version' => 'v2.3.0',
+            'version' => '2.3.0.0',
+            'reference' => '12fb2dfe5e16183de69e784a7b84046c43d97e8e',
+            'type' => 'composer-plugin',
+            'install_path' => __DIR__ . '/./installers',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'firewire/plates-for-processwire' => array(
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '7073fb0e75e29e4122a881e4f3ebc635e4fe40b0',
+            'type' => 'pw-module',
+            'install_path' => __DIR__ . '/../../',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'league/plates' => array(
+            'pretty_version' => 'v3.6.0',
+            'version' => '3.6.0.0',
+            'reference' => '12ee65166adbc6fb5916fb80b0c0758e49a2d996',
+            'type' => 'library',
+            'install_path' => __DIR__ . '/../league/plates',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+    ),
+);

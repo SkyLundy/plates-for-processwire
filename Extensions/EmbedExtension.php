@@ -7,7 +7,7 @@
 
 declare(strict_types=1);
 
-namespace Plates\Extensions;
+namespace PlatesForProcessWire\Extensions;
 
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
