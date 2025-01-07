@@ -15,7 +15,7 @@ use Plates\Extensions\{
     WireExtension
 };
 
-class Plates extends WireData implements Module, ConfigurableModule
+class PlatesForProcessWire extends WireData implements Module, ConfigurableModule
 {
     public readonly Engine $templates;
 
