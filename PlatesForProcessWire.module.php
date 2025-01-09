@@ -12,6 +12,7 @@ use PlatesForProcessWire\Extensions\{
     EmbedExtension,
     ConditionalsExtension,
     FunctionsExtension,
+    SanitizerExtension,
     WireExtension
 };
 
@@ -125,6 +126,10 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
 
         if ($this->add_wire_extension) {
             $engine->loadExtension(new WireExtension());
+        }
+
+        if ($this->add_sanitizer_extension) {
+            $engine->loadExtension(new SanitizerExtension());
         }
 
         if ($this->add_conditionals_extension) {
@@ -298,6 +303,18 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
           'label2' => 'Add Wire extension',
           'description' => 'Easily access useful ProcessWire utilties and object creators',
           'checked' => $this->add_wire_extension,
+          'collapsed' => Inputfield::collapsedNever,
+          'themeBorder' => 'hide',
+          'columnWidth' => 100,
+        ]);
+
+        $fieldset->add([
+          'type' => 'checkbox',
+          'name' => 'add_sanitizer_extension',
+          'label' => 'Sanitizer Extension',
+          'label2' => 'Add Sanitizer extension',
+          'description' => 'Wrapper for accessing ProcessWire sanitizer functions. Functions that accept one argument will be batchable',
+          'checked' => $this->add_sanitizer_extension,
           'collapsed' => Inputfield::collapsedNever,
           'themeBorder' => 'hide',
           'columnWidth' => 100,

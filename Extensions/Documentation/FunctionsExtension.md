@@ -698,13 +698,26 @@ This is useful for creating an iteration counter.
 
 Provides fluent access to nested values by converting all associative arrays to stdClass objects recursively. List arrays are not modified. Changes the method of accessing values from array `[]` notation to a fluent object `->` notation. Safe to use with arrays containing any data types, does not rely on `json_encode`/`json_decode`
 
-Largely aesthetic, but may provide more readability for complex data structures
-
 **Batchable**
 
 ```php
+<!-- Iterating through an array with key access syntax can be verbose -->
+<?php foreach($foo as $bar): ?>
+   <a href="<?=$bar['zig']?>"><?=$bar['zag']?></a>
+   <a href="<?=$bar['zig2']?>"><?=$bar['zag2']?></a>
+   <a href="<?=$bar['zig3']?>"><?=$bar['zag3']?></a>
+<?php endforeach; ?>
+
+<!-- Using toObject() can clean up the syntax in templates -->
+<?php foreach($this->toObject($foo) as $bar): ?>
+   <a href="<?=$bar->zig?>"><?=$bar->zag?></a>
+   <a href="<?=$bar->zig2?>"><?=$bar->zag2?></a>
+   <a href="<?=$bar->zig3?>"><?=$bar->zag3?></a>
+<?php endforeach; ?>
+
+<!-- A more complex example: -->
 <php
-// Given this array data structure
+// Given this data structure
 $people = [
     [
         'name' => 'Marty McFly',
@@ -713,7 +726,7 @@ $people = [
             'guitar',
             'skateboarding',
             'hoverboarding',
-            ],
+        ],
         'network' => [
             'family' => [
                 [
@@ -737,11 +750,9 @@ $people = [
             ],
         ],
     ],
-    // ... ommitted for brevity
 ];
 ?>
 
-<!-- Object with fluent access -->
 <?php foreach ($this->toObject($people) as $person): ?>
   <h2><?=$person->name?></h2>
   <h3><?=$person->occupation?></h3>
@@ -749,13 +760,13 @@ $people = [
   <h3>Family</h3>
   <ul>
     <?php foreach ($person->network->family as $individual): ?>
-      <li><?=$individual->name?>, <?=$individual->relation?></li>
+      <li><?="{$individual->name}, {$individual->relation}"?></li>
     <?php endforeach ?>
   </ul>
   <h3>Connections</h3>
   <ul>
     <?php foreach ($person->network->connections as $individual): ?>
-      <li><?=$individual->name?>, <?=$individual->relation?></li>
+      <li><?="{$individual->name}, {$individual->relation}"?></li>
     <?php endforeach ?>
   </ul>
 <?php endforeach ?>
@@ -772,12 +783,11 @@ Truncates a string or an array of strings, wrapper for `WireTextTools::truncate(
 <!-- With arguments passed to WireTextTools::truncate() method -->
 <p>Summary: <?=$this->truncate($page->description, 500, ['type' => 'sentence'])?></p>
 
-<div>
-  Famous grocery lists:
-    <?php foreach ($this->truncate($page->grocery_lists->explode('text'), 500) as $text): ?>
-      <p><?=$text?></p>
-    <?php endforeach ?>
-</div>
+<ul>
+  <?php foreach ($this->truncate($page->grocery_list->explode('text'), 500) as $text): ?>
+    <li><?=$text?></li>
+  <?php endforeach ?>
+</ul>
 ```
 
 ## unique
@@ -792,6 +802,12 @@ Returns only unique instances of values in a string, array, int, float, WireArra
 
 <!-- Unique numbers, returns 3852 -->
 <p>Unique letters: <?=$this->unique(33885555552)?></p>
+
+<!-- Unique in array with batching -->
+<p>Random color: <?=$this->batch(['red', 'orange', 'yellow', 'red'], 'unique|random|ucfirst')?></p>
+
+<!-- Unique in WireArray field values with batching -->
+<p>Random color: <?=$this->batch($pages->find('template=colors')->explode('title'), 'unique|random|ucfirst')?></p>
 ```
 
 ## url

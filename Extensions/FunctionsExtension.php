@@ -61,6 +61,7 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
         $engine->registerFunction('batchEach', [$this, 'batchEach']);
         $engine->registerFunction('bit', [$this, 'bit']);
+        $engine->registerFunction('breadcrumbs', [$this, 'breadcrumbs']);
         $engine->registerFunction('clamp', [$this, 'clamp']);
         $engine->registerFunction('csv', [$this, 'csv']);
         $engine->registerFunction('detectVideoSvc', [$this, 'detectVideoSvc']);
@@ -133,6 +134,39 @@ class FunctionsExtension implements ExtensionInterface
         }
 
         return $this->wireTextTools->truncate($value, $maxLength, $options);
+    }
+
+    /**
+     * Ensures string is single spaced, null safe
+     *
+     * - Batchable
+     *
+     * @param  mixed  $value Value to single space
+     * @return string|null
+     */
+    public function singleSpaced(?string $value): ?string
+    {
+        return is_string($value) ? preg_replace('/\s{1,}/U', ' ', $value) : $value;
+    }
+
+    /**
+     * Decodes a JSON string to an array. Makes json_decode to array option batchable. All other
+     * arguments are transparent
+     *
+     * - Batchable
+     *
+     * @param  string|null  $json  json_decode PHP value
+     * @param  int          $depth json_decode PHP value
+     * @param  int          $flags json_decode PHP value
+     * @return mixed
+     *
+     */
+    public function jsonDecodeArray(
+        ?string $json,
+        int $depth = 512,
+        int $flags = 0
+    ): mixed {
+        return json_decode($json, true, $depth, $flags);
     }
 
     /**
@@ -441,43 +475,6 @@ class FunctionsExtension implements ExtensionInterface
     public function odd(int $value): bool
     {
         return $value % 2 !== 0;
-    }
-
-    /**
-     * Strings
-     */
-
-    /**
-     * Ensures string is single spaced, null safe
-     *
-     * - Batchable
-     *
-     * @param  mixed  $value Value to single space
-     * @return string|null
-     */
-    public function singleSpaced(?string $value): ?string
-    {
-        return is_string($value) ? preg_replace('/\s{1,}/U', ' ', $value) : $value;
-    }
-
-    /**
-     * Decodes a JSON string to an array. Makes json_decode to array option batchable. All other
-     * arguments are transparent
-     *
-     * - Batchable
-     *
-     * @param  string|null  $json  json_decode PHP value
-     * @param  int          $depth json_decode PHP value
-     * @param  int          $flags json_decode PHP value
-     * @return mixed
-     *
-     */
-    public function jsonDecodeArray(
-        ?string $json,
-        int $depth = 512,
-        int $flags = 0
-    ): mixed {
-        return json_decode($json, true, $depth, $flags);
     }
 
     /**
@@ -939,7 +936,9 @@ class FunctionsExtension implements ExtensionInterface
         }
 
         if (is_array($value)) {
-            return array_unique($value);
+            $unique = array_unique($value);
+
+            return array_values($unique);
         }
 
         $type = gettype($value);
@@ -1104,6 +1103,80 @@ class FunctionsExtension implements ExtensionInterface
 
         return $this->reverse($appended);
     }
+
+    /**
+     * Markup
+     */
+
+    /**
+     * Renders a list of breadcrumb links
+     * @param  array  $config Options for rendering]
+     * @return string
+     */
+    public function breadcrumbs(array $config = []): string
+    {
+        $config = (object) [
+            'startPage' => '/',
+            'labelField' => 'title',
+            'prependHome' => true,
+            'appendCurrent' => false,
+            'currentAsLink' => false,
+            'ulId' => null,
+            'ulClass' => null,
+            'separator' => null,
+            ...$config,
+        ];
+
+        $startPage = $config->startPage;
+
+        if (!is_a($startPage, Page::class, true)) {
+            $startPage = wire('pages')->get($config->startPage);
+        }
+
+        $breadcrumbPages = wire('page')->parents;
+
+        if (!$config->prependHome) {
+            $home = wire('pages')->get('/');
+
+            $breadcrumbPages->remove($home);
+        }
+
+        if ($config->appendCurrent) {
+            $breadcrumbPages->append(wire('page'));
+        }
+
+        $items = array_map(function($page) use ($config) {
+            $label = $page->{$config->labelField};
+            $itemContent = $label;
+
+            if ($page->id !== wire('page')->id || $config->currentAsLink) {
+                $itemContent = "<a href='{$page->url}'>{$label}</a>";
+            }
+
+            return "<li>{$itemContent}</li>";
+        }, $breadcrumbPages->getArray());
+
+        $items = implode($config->separator ? "<li>{$config->separator}</li>" : '', $items);
+
+        $ulAttrs = [];
+
+        $config->ulId && $ulAttrs[] = "id='{$config->ulId}'";
+        $config->ulClass && $ulAttrs[] = "class='{$config->ulClass}'";
+
+        $ulAttrs = implode(' ', $ulAttrs);
+
+        $ulAttrs && $ulAttrs = " {$ulAttrs}";
+
+        return <<<HTML
+        <ul{$ulAttrs}>
+            {$items}
+        </ul>
+        HTML;
+    }
+
+    /**
+     * Calculations
+     */
 
     /**
      * Adds all of the values in an array, list array by index, associative array by key, array of

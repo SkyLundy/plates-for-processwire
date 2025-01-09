@@ -18,24 +18,22 @@ From the Plates [documentation](https://platesphp.com/):
 
 In practice Plates provides:
 
-- Reusable and nestable layouts with defined output blocks that receive data
+- Reusable nestable layouts with inheritance and defined output blocks that receive data
 - Files containing "component" style markup that receive data and be reused and nested
 - Chainable filters that make transforming and rendering values more efficient
-- Better readability through organization and syntax
-- No template compiling, interpreting, or syntax
+- No new syntax, familiar code you already write
+- No template compiling or interpreting
+- Preference for existing PHP functions over engine implementations
+- File path resolution via Folders
 
 ## Requirements & Usage
-
-Plates For ProcessWire was created to provide access to Plates in a way that feels native to use with ProcessWire. It is a lightweight wrapper that preloads the ProcessWire API with Plates to make all ProcessWire objects like `$page`, `$config`, `$user`, etc. ready out of the box.
-
-**This module does not include the Plates package itself.** This allows you to control the version you use, upgrade when desired, and keep this module from requiring "upkeep" releases when Plates is updated. Plates for ProcessWire is just an adapter that provides the connection between Plates and your ProcessWire application.
 
 Requirements:
 
 - ProcessWire 3.0+
-- Plates
-- Plates For ProcessWire
 - PHP 8.2+
+
+Plates for ProcessWire comes packaged with the Plates library so there is no need to install it separately. If you choose to install Plates separately via Composer, Plates for ProcessWire will use that instead.
 
 ### Installing
 
@@ -43,29 +41,19 @@ Requirements:
 - Download this module and unzip in your modules directory
 - Install and choose whether to load the custom Extensions built for and included with Plates for ProcessWire
 
-## Using Plates With ProcessWire
+## How Plates for ProcessWire Works
 
-Before getting started with Plates in ProcessWire, it's highly recommended that you review the (very short and simple) documentation to get a feel for how Plates works, its features, and approach to templating. After reviewing that information, come back and see how Plates for ProcessWire will work for your application or website.
-
-You may skip any steps in the documentation that create new objects such as `Engine` or manually creating templates. Plates for ProcessWire handles all of that for you.
-
-Where the Plates documentation references the variable `$templates`, use `$plates->templates` instead.
-
-[View the Plates documentation here](https://platesphp.com/getting-started/simple-example/)
-
-### How Plates for ProcessWire Works
-
-Using Plates for ProcessWire is very simple. Plates For ProcessWire provides the following:
+Plates For ProcessWire is a lightweight wrapper that preloads the ProcessWire API with Plates to make all ProcessWire objects like `$page`, `$config`, `$user`, etc. ready out of the box. Using Plates for ProcessWire is very simple. Plates For ProcessWire provides the following:
 
 - A global `$plates` object that references the module
 - The full ProcessWire API to all Plates template and layout files
 - Optional custom Extensions included with this module that can be managed via the module config page
 
-Plates for ProcessWire automatically creates the `Engine` object and specifies `/site/templates` as the root directory where Plates will look for files to render.
+Plates for ProcessWire automatically creates the `Engine` object and specifies `/site/templates` as the root directory where Plates will look for files to render and any Folders you define.
 
 ### Examples To Get Started
 
-This module comes with examples to help illustrate how to use Plates in your templates, tips on how to make use of optional features, and show how to implement extra Plates features in ProcessWire.
+This module comes with examples to help illustrate how to start using Plates in your ProcessWire application, tips on how to make use of optional features, and how to implement additional Plates abilities in ProcessWire.
 
 There are two examples, a basic example that uses the core features provided by Plates, and an example that uses some of the additional functions available if the custom [Plates for ProcessWire Extensions](#platesforprocesswireextensions) are enabled on the module config page.
 
@@ -73,6 +61,14 @@ Basic: `/site/modules/Plates/examples/basic/`
 With Extensions: `/site/modules/Plates/examples/extensions_enabled/`
 
 The "extensions enabled" example uses only a small number of the wide array of useful tools and functions that are available if custom extensions are enabled. For more information, review the notes below or refer to the documentation included on the Plates for ProcessWire module config page.
+
+### Reviewing the Plates Documentation
+
+It's recommended that you review the (very short and simple) documentation to get a feel for how Plates works, its features, and approach to templating.
+
+You may skip any steps in the documentation that create new objects such as `Engine` or manually creating `Template` objects. Plates for ProcessWire handles all of that for you. Where the Plates documentation references the variable `$templates`, use `$plates->templates` instead.
+
+[View the Plates documentation here](https://platesphp.com/getting-started/simple-example/)
 
 ---
 
@@ -98,7 +94,17 @@ A good example of accessing the parent Plates template elsewhere is inside [Rock
 
 ## Plates for ProcessWire Extensions
 
-Plates for ProcessWire comes pre-packaged with extentions that you can optionally add to your project should you want to. These extensions were created specifically for this module and provide  useful tools that complement ProcessWire's objects and API. Where Plates at heart is a very lightweight templating engine, these extensions aim to add more feature parity by adding functions that act as filters and macros found in other templating engines
+Plates for ProcessWire comes pre-packaged with extentions that you can optionally add to your project should you desire. These extensions were created specifically for this module and provide  useful tools that complement ProcessWire's objects and API. Where Plates at heart is a very lightweight templating engine, these extensions aim to add more feature parity by adding functions that act as filters and macros found in other templating engines.
+
+Extensions include:
+
+- Functions Extension: A library of useful utility functions for transforming and outputting data. Inspired by functions and filters found in other templating libraries.
+- Conditionals Extension: Functions to assist with control flow and output depending on conditions
+- Wire Objects Extension: Functions that instantiate ProcessWire objects for easy use in templates
+- Sanitizer Extension: A wrapper that provides access to all Sanitizer object methods and makes many of them batchable
+- Asset Loader Extension: A configurable extension that provides fast and easy linking, inlining, and preloading CSS, JS, and font files with automatic caching parameters added to URIs.
+- Embed Extension: Adds tools to embed Plates templates like layouts for increased flexibility and code reuse
+
 
 Each extension can be enabled when configuring the module and documentation for each is provided on the module config page. Documentation can also be viewed in individual markdown files located within `/site/modules/Plates/Extensions/Documentation/`.
 
@@ -115,34 +121,34 @@ To add [Community Extensions](https://platesphp.com/extensions/community/), inst
 
 There are no special language constructs or changes to how you write code. No `{{ double_braces }}`  `{$braceWraps}`, just `<?=$var?>`. There's no interpreter layer, just PHP.
 
-Is it more verbose? A little. If you're choosing a templating language because you want to avoid native shorthand PHP echo tags, then this may not be for you. If you want an _incredibly_ lightweight solution with native-feeling layouts, partials, templates, code reuse, chainable functions, and can work with [PHP's built-in alternative control structure syntax](https://www.php.net/manual/en/control-structures.alternative-syntax.php), then Plates is worth considering.
+Is it more verbose? A little. If you're choosing a templating language simply because you want to avoid native shorthand PHP echo tags, then Plates may not be the right fit. If you want an _incredibly_ lightweight solution with native-feeling layouts, partials, templates, code reuse, chainable functions, and works with a focus on native PHP functions and [PHP's built-in alternative control structure syntax](https://www.php.net/manual/en/control-structures.alternative-syntax.php), then Plates is worth considering.
 
 The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).
 
-Concise syntax is something that templating engines use to contrast their approach to writing templates vs standard PHP. [Smarty](https://www.smarty.net/syntax_comparison) makes this comparison between its syntax and pure PHP.  The example variable has been changed to better reflect usage with ProcessWire.
+Concise syntax is something that templating engines use to contrast their approach to writing templates vs standard PHP. [Smarty](https://www.smarty.net/syntax_comparison) makes this comparison between its syntax and pure PHP using a long form echo statement with nested function calls.
 
 **PHP**
 
 ```php
-<?php echo htmlspecialchars(strtolower($page->foo),ENT_QUOTES,'UTF-8'); ?>
+<?php echo htmlspecialchars(strtolower($foo),ENT_QUOTES,'UTF-8'); ?>
 ```
 
 **Smarty**
 
 ```php
-{$page->foo|lower|escape}
+{$page|lower|escape}
 ```
 
 **Plates**
 
 ```php
-<?=$this->e($page->foo, 'strtolower')?>
+<?=$this->e($foo, 'strtolower')?>
 ```
 
-In Plates, `e()` is the [escape](https://platesphp.com/templates/escaping/) function. As noted below, this is redundant and unnecessary in ProcessWire unless you're outputting values from an unsafe source or fields with output formatting disabled. In almost every scenario, this is safe to use:
+In Plates, `e()` is provided as the [escape](https://platesphp.com/templates/escaping/) function. As noted below, this is redundant and unnecessary in ProcessWire unless you're outputting values from an unsafe source or fields with output formatting disabled. In almost every scenario, this is safe to use:
 
 ```php
-<?=strtolower($page->foo)?>
+<?=strtolower($foo)?>
 ```
 
 ### A note on escaping strings
