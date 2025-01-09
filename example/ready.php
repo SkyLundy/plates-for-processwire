@@ -33,6 +33,10 @@ $plates->templates->addFolder('layouts', "{$templatesDir}layouts");
 // Add a folder located at /site/templates/views
 $plates->templates->addFolder('views', "{$templatesDir}views");
 
+// You can shorten arbitrarily complex file structures to single keyword namespaces
+$plates->templates->addFolder('someItems', "{$templatesDir}deeply/nested/directory/items");
+
+
 /**
  * You can also use ready.php to either register your own custom functions or include a file that
  * contains function registries. These are accessed in your Plates templates via the `$this` object
