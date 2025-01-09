@@ -1,13 +1,14 @@
 # Plates For ProcessWire
-## Use the Plates templating engine by The League of Extraordinary Packages with ProcessWire
 
-Plates is a PHP native lightweight templating system that with no compiling, interpreting, or caching. It's pure PHP with no templating language to learn. This approach makes it a highly qualified companion to ProcessWire's powerful and intuitive API.
+**Use the Plates templating system by The League of Extraordinary Packages with ProcessWire**
 
-What Plates for ProcessWire offers:
+Plates is a PHP native lightweight templating system that with no compiling, interpreting, or transpiler caching layer. It's pure PHP templating with no syntax to learn and feels at home with ProcessWire.
+
+Plates for ProcessWire offers:
 
 - Preloaded and globally available ProcessWire API objects in all of Plates template files
 - Pre-configured for use with the ProcessWire templates directory
-- Add enable and disable core Plates extensions via the module config page
+- Enable and disable core Plates extensions via the module config page
 - Optional additional custom extensions built for this module that add powerful and chainable methods to work with data, can be enabled and disabled via the module config page
 
 ## An Introduction to Plates
@@ -111,13 +112,11 @@ Plates for ProcessWire includes the ability to enable extensions provided by the
 - [Asset](https://platesphp.com/extensions/asset/)
 - [URI](https://platesphp.com/extensions/uri/)
 
-To add [Community Extensions](https://platesphp.com/extensions/community/), install them with Composer and register them with Plates in your `ready.php` module.
+To add [Community Extensions](https://platesphp.com/extensions/community/), install them with Composer and register them with Plates in your `ready.php` file.
 
 ## Syntax and Usage Tips
 
-There are no special language constructs or changes to how you write code. No `{{ double_braces }}` or `{$braceWraps}`, just `<?=$var?>`. There's no interpreter layer, just PHP.
-
-Is it more verbose? A little. If you're choosing a templating language simply because you want to avoid native shorthand PHP echo tags, then Plates may not be the right fit. If you want an _incredibly_ lightweight solution with native-feeling layouts, partials, templates, code reuse, chainable functions, and works with a focus on native PHP functions and [PHP's built-in alternative control structure syntax](https://www.php.net/manual/en/control-structures.alternative-syntax.php), then Plates is worth considering.
+There are no special language constructs or changes to how you write code. No `{{ double_braces }}` or `{$braceWraps}`, just `<?=$var?>`. There's no compilation or interpreter layer, just PHP.
 
 The "Syntax" page in the Plates documentation is just a few style recommendations and best practices that often apply to PHP in general. [You can view the not-really-a-syntax page here](https://platesphp.com/templates/syntax/).
 
@@ -135,10 +134,16 @@ Concise syntax is something that templating engines use to contrast their approa
 <?=$this->e($foo, 'strtolower')?>
 ```
 
-In Plates, `e()` is provided as the [escape](https://platesphp.com/templates/escaping/) function. As noted below, this is redundant and unnecessary in ProcessWire unless you're outputting values from a known unsafe source or fields with output formatting disabled. In almost every scenario, this is safe to use:
+In Plates, `e()` is provided as the [escape](https://platesphp.com/templates/escaping/) function. As is noted below, this is redundant and unnecessary in ProcessWire unless you're outputting values from a known unsafe source or fields with output formatting disabled. In almost every scenario, this is safe to use:
 
 ```php
 <?=strtolower($foo)?>
+```
+
+With the `batch()` function that Plates provides, you can execute multiple chained functions on the same value:
+
+```php
+<?=$this->batch($foo, 'strtolower|ucwords')?>
 ```
 
 ### A note on escaping strings
@@ -181,7 +186,7 @@ This is a shorthand echo statement outputs a value, it is not a short tag
 
 Short tag use is not recommended as they can be disabled in any `php.ini` configuration. This is the widely accepted compatability concern and PHP documentation itself states they should not be used. If short tags are disabled in any environment, shorthand echo statements will not be affected.
 
-PHP considers `<?php ?>` and `<?= ?>` to be equally normal tags and [recommends their use](https://www.php.net/manual/en/language.basic-syntax.phptags.php).
+PHP considers `<?php ?>` and `<?= ?>` to be equally standard syntax and [recommends their use](https://www.php.net/manual/en/language.basic-syntax.phptags.php).
 
 ### Tips for tidy templates
 
@@ -213,8 +218,6 @@ There are many native language constructs in PHP that can clean up your templati
 <p><?=$maybeExists ?? 'Fallback value'?></p>
 
 // Object property and method calls can be made null safe
-<?=$person?->name?>
-// Nested
 <?=$person?->name?->first?>
 
 // Multiple values
@@ -224,11 +227,10 @@ Hello <?=$page->first_name?> <?=$page->first_name?>!
 // Consider string interpolation:
 Hello <?="{$page->first_name} {$page->last_name}"?>!
 
-// String interpolation makes function use simple
+// Use string interpolation with functions
 Hello <?=trim("{$page->first_name} {$page->last_name}")?>!
 
-// Use string interpolation with batching
-// Instead of this:
+// For multiple functions, instead of this:
 <?php $fullName = trim("{$page->first_name} {$page->last_name}") ?>
 Hello <?=ucwords($fullName)?>!
 
