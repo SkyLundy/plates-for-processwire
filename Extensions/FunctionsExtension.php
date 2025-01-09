@@ -37,6 +37,7 @@ use InvalidArgumentException;
 use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
+use League\Plates\Template\Template;
 use LogicException;
 use ProcessWire\{Page, PageArray, SelectableOptionArray, WireArray, WireNull, WireTextTools};
 use stdClass;
@@ -47,6 +48,8 @@ use function ProcessWire\wire;
 class FunctionsExtension implements ExtensionInterface
 {
     public Engine $engine;
+
+    public Template $template;
 
     private WireTextTools $wireTextTools;
     /**
@@ -493,27 +496,7 @@ class FunctionsExtension implements ExtensionInterface
      */
     public function batchEach(array $values, string $functions): array
     {
-        $functions = explode('|', $functions);
-
-        // Lovingly borrowed from Plates core
-        // @see League\Plates\Template::batch()
-        $batch = function($var) use ($functions): mixed {
-            foreach ($functions as $function) {
-                if ($this->engine->doesFunctionExist($function)) {
-                    $var = call_user_func(array($this, $function), $var);
-                } elseif (is_callable($function)) {
-                    $var = call_user_func($function, $var);
-                } else {
-                    throw new LogicException(
-                        'The batch function could not find the "' . $function . '" function.'
-                    );
-                }
-            }
-
-            return $var;
-        };
-
-        return array_map(fn ($item) => $batch($item), $values);
+        return array_map(fn ($item) => $this->template->batch($item, $functions), $values);
     }
 
     /**
