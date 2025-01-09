@@ -1,5 +1,4 @@
-
-# Sanitizer Extension
+### Sanitizer Extension
 
 This extension is a wrapper for all ProcessWire sanitizer functions. Any method that you can call on the `$sanitizer` object, you can call using this extension. This provides the benefit of allowing any ProcessWire sanitizer functions that accept a single value in `batch()` chains.
 

@@ -654,17 +654,17 @@ class FunctionsExtension implements ExtensionInterface
      * Given a parent page or parent page selector, gets children, prepends parent page, and returns
      * a new PageArray. Optional child page selector may be provided to select/filter children
      *
-     * @param  Page|string $parentSelector Parent page or parent page selector
-     * @param  string|null $childSelector  Optional child page selector
+     * @param  Page|string $parentPageOrSelector Parent page or parent page selector
+     * @param  string|null $childSelector        Optional child page selector
      * @return PageArray
      */
     public function withChildren(
-        Page|int|string $parentSelector,
+        Page|int|string $parentPageOrSelector,
         ?string $childSelector = null
     ): PageArray {
         $parentPage = match (true) {
-            is_a($parentSelector, Page::class, true) => $parentSelector,
-            default => wire('pages')->get($parentSelector),
+            is_a($parentPageOrSelector, Page::class, true) => $parentPageOrSelector,
+            default => wire('pages')->get($parentPageOrSelector),
         };
 
         return $parentPage->children($childSelector ?? '')->prepend($parentPage);

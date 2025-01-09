@@ -31,11 +31,12 @@ class ConditionalsExtension implements ExtensionInterface
         $this->engine = $engine;
 
         $engine->registerFunction('attrIf', [$this, 'attrIf']);
+        $engine->registerFunction('attrIfPage', [$this, 'attrIfPage']);
+        $engine->registerFunction('attrIfNotPage', [$this, 'attrIfNotPage']);
         $engine->registerFunction('fetchIf', [$this, 'fetchIf']);
         $engine->registerFunction('if', [$this, 'if']);
         $engine->registerFunction('ifEq', [$this, 'ifEq']);
         $engine->registerFunction('ifPage', [$this, 'ifPage']);
-        $engine->registerFunction('attrIfPage', [$this, 'attrIfPage']);
         $engine->registerFunction('ifParam', [$this, 'ifParam']);
         $engine->registerFunction('ifPath', [$this, 'ifPath']);
         $engine->registerFunction('ifTag', [$this, 'ifTag']);
@@ -46,6 +47,7 @@ class ConditionalsExtension implements ExtensionInterface
         $engine->registerFunction('matchStr', [$this, 'matchStr']);
         $engine->registerFunction('matchTrue', [$this, 'matchTrue']);
         $engine->registerFunction('pageIs', [$this, 'pageIs']);
+        $engine->registerFunction('pageIsNot', [$this, 'pageIsNot']);
         $engine->registerFunction('paramIs', [$this, 'paramIs']);
         $engine->registerFunction('pathIs', [$this, 'pathIs']);
         $engine->registerFunction('switch', [$this, 'switch']);
@@ -93,49 +95,93 @@ class ConditionalsExtension implements ExtensionInterface
     }
 
     /**
-     * Checks if the current page matches the provided page.
+     * Checks if the current page matches the provided Page object, selector, or ID.
      * Returns boolean if no values passed for second and third parameters.
      * If a value is passed for one or both of the second and third parameters, returns the value
-     * for true or false based on comparison
+     * for true or false based on comparison. Null safe
      *
-     * @param  Page|null  $page        Page to check if current page
-     * @param  mixed|null $returnTrue  Optional value to return if page is current page
-     * @param  mixed|null $returnFalse Optional value to return if page is not current page
+     * @param  Page|string|int|null  $pageOrSelector  Page object, selector, or page ID to check against current page
+     * @param  mixed|null            $returnTrue      Optional value to return if page is current page
+     * @param  mixed|null            $returnFalse     Optional value to return if page is not current page
      * @return mixed
      */
-    public function ifPage(?Page $page, mixed $returnTrue = true, mixed $returnFalse = false): mixed
-    {
-        $isCurrentPage = wire('page')->id === $page?->id;
+    public function ifPage(
+        Page|string|int|null $pageOrSelector,
+        mixed $returnTrue = true,
+        mixed $returnFalse = false
+    ): mixed {
+        $currentPage = wire('page');
+
+        $isCurrentPage = match (true) {
+            is_string($pageOrSelector) => $currentPage->matches($pageOrSelector),
+            is_int($pageOrSelector) => $currentPage->matches($pageOrSelector),
+            is_a($pageOrSelector, Page::class, true) => $pageOrSelector->id === $currentPage->id,
+            default => false,
+        };
 
         return $isCurrentPage ? $returnTrue : $returnFalse;
     }
 
     /**
-     * Checks if current page matches the provided page, returns a boolean
+     * Checks if current page matches the provided Page object, selector, or page ID, returns a boolean, null safe
      *
-     * @param  Page|null  $page Page to check against current page
+     * @param  Page|string|int|null  $pageOrSelector  Page object, selector, or page ID to check against current page
      * @return bool
      */
-    public function pageIs(?Page $page): bool
+    public function pageIs(Page|string|int|null $pageOrSelector): bool
     {
-        return $this->ifPage($page, true, false);
+        return $this->ifPage($pageOrSelector, true, false);
     }
 
     /**
-     * Checks if the given page is the current page and returns a string attribute with value
+     * Checks if current page does not match the provided Page object, selector, or page ID, returns a boolean, null safe
+     *
+     * @param  Page|string|int|null  $pageOrSelector  Page object, selector, or page ID to check against current page
+     * @return bool
+     */
+    public function pageIsNot(Page|string|int|null $pageOrSelector): bool
+    {
+        return !$this->pageIs($pageOrSelector);
+    }
+
+    /**
+     * Checks if the given page is the current page and returns a string attribute with optional value
+     *
+     * @see ConditionalsExtension::attrIf()
+     *
      * @param  Page|null   $page       Page to check
-     * @param  string      $attr       Attribute to set
-     * @param  mixed|null $valueTrue   Attribute value if true
+     * @param  string      $attr       Attribute to return
+     * @param  mixed|null $valueTrue   Optional attribute value if true
      * @param  mixed|null $valueFalse  Attribute value if false
      * @return string|null
      */
     public function attrIfPage(
-        ?Page $page,
+        Page|string|int|null $pageOrSelector,
         string $attr,
         mixed $valueTrue = null,
         mixed $valueFalse = null,
     ): ?string {
-        return $this->attrIf($this->pageIs($page), $attr, $valueTrue, $valueFalse);
+        return $this->attrIf($this->pageIs($pageOrSelector), $attr, $valueTrue, $valueFalse);
+    }
+
+    /**
+     * Checks if the given page is the current page and returns a string attribute with optional value
+     *
+     * @see ConditionalsExtension::attrIf()
+     *
+     * @param  Page|null   $page       Page to check
+     * @param  string      $attr       Attribute to return
+     * @param  mixed|null $valueTrue   Optional attribute value if true
+     * @param  mixed|null $valueFalse  Attribute value if false
+     * @return string|null
+     */
+    public function attrIfNotPage(
+        Page|string|int|null $pageOrSelector,
+        string $attr,
+        mixed $valueTrue = null,
+        mixed $valueFalse = null,
+    ): ?string {
+        return $this->attrIf(!$this->pageIs($pageOrSelector), $attr, $valueTrue, $valueFalse);
     }
 
     /**
@@ -429,6 +475,10 @@ class ConditionalsExtension implements ExtensionInterface
     /**
      * Method to write shorter-handed conditional attributes. Output value is prefixed with a space
      *
+     * If only a conditional value and attribute are provided, the attribute will be returned if true, null if false
+     * If a truthy attribute value is passed, the attribute and value will only be returned if the conditional is true
+     * If a truthy and falsey value are passed, the attribute will always be returned with the corresponding correct value
+     *
      * @param  mixed      $conditional Value checked
      * @param  string     $attr        Attriute to output
      * @param  string|int $valueTrue   Value returned if conditional true, optional
@@ -450,7 +500,7 @@ class ConditionalsExtension implements ExtensionInterface
         }
 
         if (!!$conditional && !$valueFalse) {
-            return "{$attr}=\"{$valueTrue}\"";
+            return " {$attr}=\"{$valueTrue}\"";
         }
 
         $value = $conditional ? $valueTrue : $valueFalse;
@@ -458,6 +508,26 @@ class ConditionalsExtension implements ExtensionInterface
         if ($value) {
             return " {$attr}=\"{$value}\"";
         }
+    }
+
+    /**
+     * Inverse of attrIf
+     *
+     * @see ConditionalsExtension::attrIf()
+     *
+     * @param  mixed      $conditional Value checked
+     * @param  string     $attr        Attriute to output
+     * @param  string|int $valueFalse  Value returned if conditional false optional
+     * @param  string|int $valueTrue   Value returned if conditional true, optional
+     * @return string                  Attribute with value determined by $conditional
+     */
+    public function attrIfNot(
+        mixed $conditional,
+        string $attr,
+        mixed $valueFalse = null,
+        mixed $valueTrue = null,
+    ): mixed {
+        return $this->attrIf(!$conditional, $attr, $valueFalse, $valueTrue);
     }
 
     /**

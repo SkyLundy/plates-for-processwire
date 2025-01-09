@@ -412,6 +412,15 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
           'themeOffset' => 's',
         ]);
 
+        // Sanitizer Extension
+        $fieldset->add([
+          'type' => 'InputfieldMarkup',
+          'label' => __('Sanitizer Extension'),
+          'value' => $getMarkup('SanitizerExtension.md'),
+          'collapsed' => Inputfield::collapsedYes,
+          'themeOffset' => 's',
+        ]);
+
         // Embed Extension
         $fieldset->add([
           'type' => 'InputfieldMarkup',

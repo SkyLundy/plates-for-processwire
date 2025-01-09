@@ -1,1 +1,0 @@
-<?=$plates->templates->render('views::home')?>

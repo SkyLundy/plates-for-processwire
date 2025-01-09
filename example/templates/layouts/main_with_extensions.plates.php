@@ -1,10 +1,7 @@
 <?php namespace ProcessWire;
 /**
- * Using a docblock to specify data that is expected when using a file in Plates template is not
- * required, but it may be considered good practice for organization and clarity
- *
- * @property string|null $title       Page title
- * @property string|null $description Meta description
+ * @property string|null $title      Page title
+ * @property string|null $decription Meta description
  *
  * $this->if() - Provided by Conditionals extension
  * $this->preloadAssets() - Provided by Asset Loader extension
@@ -18,7 +15,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?=$title ?? $page->title?></title>
+    <title><?= $title ?? $page->title; ?></title>
     <?=$this->if($description ?? false, "<meta name='description' content='{$description}'>")?>
     <?=$this->preloadAssets([
       'fonts::ProximaNova.woff2',
@@ -29,14 +26,14 @@
     <?=$this->inlineAsset('styles::critical.css')?>
   </head>
   <body>
-    <header class="site-header">
+    <header>
       <a href="<?=$pages->get('/')->url?>">
-        <img src="<?=$config->paths->templates?>images/logo.jpg" alt="<?=__('Our Logo')?>">
+        <img src="<?=$config->paths->templates?>static_images/logo.jpg" alt="<?=__('Our Logo')?>">
       </a>
-      <nav>
-        <?php $this->insert('components::site_nav'); ?>
-      </nav>
+
+      <?php $this->insert('components::navigation', ['ariaLabel' => __('Main')]); ?>
     </header>
+
     <section>
       <?= $this->section('page_hero'); ?>
     </section>
@@ -45,9 +42,8 @@
 
     <footer class="site-footer">
       <?= $this->section('page_footer'); ?>
-      <nav>
-        <?php $this->insert('components::site_nav'); ?>
-      </nav>
+
+      <?php $this->insert('components::navigation', ['ariaLabel' => __('Footer')]); ?>
     </footer>
     <?=$this->linkAsset('js::app.js')?>
   </body>

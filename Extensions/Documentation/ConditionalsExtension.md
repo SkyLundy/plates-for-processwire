@@ -23,30 +23,53 @@ Note that the space before the opening `<?=` is ommitted. Attributes are automat
 
 ## attrIfPage
 
-Checks whether a page passed as the first argument is the current page. If true, outputs the attribute passed as the second argument. Third and fourth arguments are values to output if is or is not current page respectively.
+Checks whether a Page object, selector, or page ID passed as the first argument matches the current page.
+
+Attributes are always rendered with a leading space.
+
+If only an attribute is passed, the attribute will be returned if page matches current page, null otherwise
+If only an attribute and a page match attribute value are passed, the attribute and value will only render if page matches
+If both page match/mismatch values are passed, the attribute will always be rendered with the value according to page match
 
 See also: [`attrIf`](#attrif)
 See also: [`ifPage`](#ifPage)
 
 ```php
+<!-- Adds data-currentPage if first argument matches current page -->
 <ul>
   <?php foreach ($pageArray as $thisPage): ?>
-    <li <?=$this->attrIfPage($thisPage, 'class', 'active')>
+    <li<?=$this->attrIfPage($thisPage, 'data-current-page')>
       <a href='<?=$thisPage->url?>'><?=$thisPage->title?></a>
     </li>
   <?php endforeach ?>
 </ul>
 
-<!-- With all arguments -->
+<!-- Adds class="active" if first argument matches current page -->
 <ul>
   <?php foreach ($pageArray as $thisPage): ?>
-    <li <?=$this->attrIfPage($thisPage, 'class', 'active', 'inactive')>
+    <li<?=$this->attrIfPage($thisPage, 'class', 'active')>
       <a href='<?=$thisPage->url?>'><?=$thisPage->title?></a>
     </li>
   <?php endforeach ?>
 </ul>
 
+<!-- Adds class="active" if first page matches current page, class="inactive" if page does not match -->
+<ul>
+  <?php foreach ($pageArray as $thisPage): ?>
+    <li<?=$this->attrIfPage($thisPage, 'class', 'active', 'inactive')>
+      <a href='<?=$thisPage->url?>'><?=$thisPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- May also use a selector or page ID -->
+<span<?=$attrIfPage('/', 'data-current')?>>Home</span>
 ```
+
+## attrIfNotPage
+
+Inverse of [`attrIfPage`](#attrifpage)
+
 
 ## fetchIf
 
@@ -54,7 +77,7 @@ Extends the native Plates `fetch` method with an added conditional. Second condi
 
 Third argument is an optional data array passed to Plates `fetch` function
 
-See also: [`insert`](#insert)
+See also: [`insertIf`](#insertif)
 
 ```php
 <!-- Works with any value type -->
@@ -210,15 +233,13 @@ Ignores leading/trailing slashes, ignores GET parameters
 <p><?=$this->ifPath('/', 'Welcome home!', 'Not home yet...')?></p>
 ```
 
-
-
 ## insertIf
 
 Extends the native Plates `insert` method with an added conditional. Second argument is any value or type checked for truthiness. If truthy, inserts the named template, otherwise no action is taken. If the conditional argument is a WireArray or WireArray derived object, the template will only render if it contains items.
 
 Third argument is an optional data array passed to Plates `insert` method.
 
-See also: [`fetch`](#fetch)
+See also: [`fetchIf`](#fetchif)
 
 ```php
 <!-- Works with any value type -->
@@ -268,7 +289,7 @@ Outputs one of two tags depending on the truthiness of the first argument with a
     <?=$page->text?>
 </<?=$this->ifTag()?>>
 
-<!-- May optionally close with tagIf when no arguments are passed -->
+<!-- May optionally close with tagIf -->
 <<?=$this->tagIf($page->headline, 'h3', 'h2'?> class="text-neutral-500">
     <?=$page->text?>
 </<?=$this->tagIf()?>>

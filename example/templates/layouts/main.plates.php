@@ -25,14 +25,14 @@
     </style>
   </head>
   <body>
-    <header class="site-header">
+    <header>
       <a href="<?=$pages->get('/')->url?>">
-        <img src="<?=$config->paths->templates?>images/logo.jpg" alt="<?=__('Our Logo')?>">
+        <img src="<?=$config->paths->templates?>static_images/logo.jpg" alt="<?=__('Our Logo')?>">
       </a>
-      <nav>
-        <?php $this->insert('components::site_nav'); ?>
-      </nav>
+
+      <?php $this->insert('components::site_nav', ['ariaLabel' => __('Main')]); ?>
     </header>
+
     <section>
       <?= $this->section('page_hero'); ?>
     </section>
@@ -41,9 +41,8 @@
 
     <footer class="site-footer">
       <?= $this->section('page_footer'); ?>
-      <nav>
-        <?php $this->insert('components::site_nav'); ?>
-      </nav>
+
+      <?php $this->insert('components::site_nav', ['ariaLabel' => __('Footer')]); ?>
     </footer>
     <script src="<?=$config->paths->templates?>scripts/app.js"></script>
   </body>
