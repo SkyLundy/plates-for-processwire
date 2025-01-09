@@ -1033,7 +1033,6 @@ class FunctionsExtension implements ExtensionInterface
      * returns empty array
      *
      * @param  array|WireArray|null  $array Array or WireArray to flatten
-     * @param  bool                  $deep  False flattens first level of nested arrays, true flattens all
      * @return array
      */
     public function flatten(array|WireArray|null $array): array|WireArray
