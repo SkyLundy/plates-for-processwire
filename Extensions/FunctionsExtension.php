@@ -38,7 +38,7 @@ use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use Exception;
 use LogicException;
-use ProcessWire\{Page, PageArray, WireArray, WireNull, WireTextTools};
+use ProcessWire\{Page, PageArray, SelectableOptionArray, WireArray, WireNull, WireTextTools};
 use stdClass;
 use Stringable;
 
@@ -957,15 +957,24 @@ class FunctionsExtension implements ExtensionInterface
     /**
      * Groups an array of objects or array of arrays by a property or key, null safe
      *
-     * @param  array|WireArray $values Array to group from
-     * @param  string|int      $by     Key or property to group by
-     * @param  bool|string     $sort   Sort by keys, true/false or 'asc'/'desc'
+     * When grouping by a field, the value of the field must be a valid array key type or
+     * compatible field. Fields that return a page are grouped by ID. SelectableOption fields are
+     * grouped by label.
+     *
+     * When grouping by raw text, values are case sensitive
+     *
+     * For valid key types and automatic value casting by PHP
+     * @see https://www.php.net/manual/en/language.types.array.php
+     *
+     * @param  array|WireArray $values  Array to group from
+     * @param  string|int      $groupBy Key or property to group by
+     * @param  bool|string     $sort    Sort by keys, true/false or 'asc'/'desc'
      * @return array
      */
     public function group(
         array|WireArray|null $values,
-        string|int $by,
-        bool|string $sort = false
+        string|int $groupBy,
+        bool|string $sort = false,
     ): ?array {
         if (is_null($values)) {
             return null;
@@ -975,8 +984,34 @@ class FunctionsExtension implements ExtensionInterface
 
         $isWireArray && $values = $values->getArray();
 
-        $result = array_reduce($values, function ($grouped, $value) use ($by) {
-            $key = is_array($value) ? $value[$by] : $value->$by;
+        // Checks if a found value can be used as an array key
+        $keyValid = fn ($key) => match(gettype($key)) {
+            'object' => false,
+            'array' => false,
+            default => true,
+        };
+
+        $result = array_reduce($values, function ($grouped, $value) use ($groupBy, $keyValid) {
+            $by = $groupBy;
+
+            // Get a value to use as a key
+            $key = match (true) {
+                is_a($value->$by, SelectableOptionArray::class, true) => $value->$by->get("{$value->$by}")?->title,
+                is_a($value->$by, Page::class, true) => $value->$by->id,
+                is_array($value) => $value[$by],
+                default => $value->$by,
+            };
+
+            // If the field returns a page, use the ID
+            if (is_a($value->$by, Page::class, true)) {
+                $key = $key->id;
+            }
+
+            if (!$keyValid($key)) {
+                $keyType = get_class($key);
+
+                throw new LogicException("Cannot group by '{$groupBy}', invalid field '{$keyType}'");
+            }
 
             $grouped[$key] ??= [];
 
