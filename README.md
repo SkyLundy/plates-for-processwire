@@ -52,7 +52,7 @@ Plates For ProcessWire is a lightweight wrapper that preloads the ProcessWire AP
 
 Plates for ProcessWire automatically creates the `Engine` object and specifies `/site/templates` as the root directory where Plates will look for files to render as well as any Folders you define.
 
-### Getting Started
+## Getting Started
 
 An example is provided that illustrates how to start using Plates in your ProcessWire application, tips on how to make use of optional features, and how to implement additional Plates abilities in ProcessWire.
 
@@ -67,8 +67,6 @@ It's recommended that you review the (very short and simple) documentation to ge
 You may skip any steps in the documentation that create new objects such as `Engine` or manually creating `Template` objects. Plates for ProcessWire handles all of that for you. Where the Plates documentation references the variable `$templates`, use `$plates->templates` instead.
 
 [View the Plates documentation here](https://platesphp.com/getting-started/simple-example/)
-
----
 
 ### Accessing the Plates Template object outside of a Plates template
 
