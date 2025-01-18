@@ -42,6 +42,8 @@ class AssetLoaderExtension implements ExtensionInterface
     {
         $this->engine = $engine;
 
+        $engine->registerFunction('getAssetPath', [$this, 'getAssetPath']);
+
         $engine->registerFunction('linkAsset', [$this, 'linkAsset']);
         $engine->registerFunction('linkAssets', [$this, 'linkAssets']);
 
@@ -60,6 +62,23 @@ class AssetLoaderExtension implements ExtensionInterface
         $engine->registerFunction('preloadCss', [$this, 'preloadCss']);
         $engine->registerFunction('preloadJs', [$this, 'preloadJs']);
         $engine->registerFunction('preloadFont', [$this, 'preloadFont']);
+    }
+
+    /**
+     * Returns the asset path for a given folderfile string
+     * @param  string       $folderFile Namespaced folder with filename
+     * @param  bool         $absolute   Return as absolute path with domain
+     * @return string|null
+     */
+    public function getAssetPath(string $folderFile, bool $absolute = false): ?string
+    {
+        $path = $this->parseFolderFile($folderFile)->filepath;
+
+        if (!$absolute) {
+            return $path;
+        }
+
+        return rtrim(wire('config')->urls->httpRoot, '/') . $path;
     }
 
     /**

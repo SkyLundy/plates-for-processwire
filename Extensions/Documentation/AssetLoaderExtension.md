@@ -141,6 +141,19 @@ You can also preload assets via `<link>` tags. Preloading assets works with CSS,
 <link rel="preload" href="/path/to/your-font.woff" as="font" crossorigin>
 ```
 
+#### Getting Asset Paths For Configured Folders
+
+You can get the path of any asset either relative or absolute.
+
+```php
+// Returns /path/to/your/styles.css
+<?=$this->getAssetPath('css::styles.css')?>
+
+// Passing a boolean true as the second argument returns an absolute path
+// Returns https://yourwebsite.com/path/to/your/styles.css
+<?=$this->getAssetPath('css::styles.css', true)?>
+```
+
 #### Asset Loader Debug Mode
 
 Enabling the asset loader extension will provide a method to enable a debug mode exclusively for this extension. This may be useful for troubleshooting during development, but is not recommended for use in production. Enabling debug mode will cause exceptions to be thrown if attemping to load/inline/preload a file that does not exist or attempt to use a configured folder that has not been set up on the module config page.
