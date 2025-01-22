@@ -13,7 +13,7 @@ use League\Plates\Engine;
 use League\Plates\Extension\ExtensionInterface;
 use League\Plates\Template\Template;
 use LogicException;
-use Plates\Extensions\Objects\Capture;
+use PlatesForProcessWire\Extensions\Objects\Capture;
 
 class EmbedExtension implements ExtensionInterface
 {

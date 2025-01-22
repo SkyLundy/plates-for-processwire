@@ -9,9 +9,9 @@
   <a href="<?=$navPage->url?>" class="<?=$navPage->id === $page->id ? 'active' : ''?>">
     <?=$navPage->title?>
   </a>
-  <?php if (!$navPage->match(1) && $navPage->numChildren()): ?>
+  <?php if (!$navPage->matches(1) && $navPage->numChildren()): ?>
     <ul>
-      <?php foreach ($navPage->numChildren() as $childPage): ?>
+      <?php foreach ($navPage->children as $childPage): ?>
         <?php $this->insert('components::navigation_item', ['navPage' => $childPage]) ?>
       <?php endforeach ?>
     </ul>

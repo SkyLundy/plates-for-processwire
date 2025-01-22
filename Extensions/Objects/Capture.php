@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Plates\Extensions\Objects;
+namespace PlatesForProcessWire\Extensions\Objects;
 
 use League\Plates\Template\Template;
 use LogicException;

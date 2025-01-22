@@ -61,6 +61,8 @@ class FunctionsExtension implements ExtensionInterface
         $this->wireTextTools = new WireTextTools();
 
         $engine->registerFunction('append', [$this, 'append']);
+        $engine->registerFunction('attributeString', [$this, 'attributeString']);
+        $engine->registerFunction('attrString', [$this, 'attrString']);
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
         $engine->registerFunction('batchEach', [$this, 'batchEach']);
         $engine->registerFunction('bit', [$this, 'bit']);
@@ -107,12 +109,39 @@ class FunctionsExtension implements ExtensionInterface
         $engine->registerFunction('urlIsExternal', [$this, 'urlIsExternal']);
         $engine->registerFunction('vimeoEmbedUrl', [$this, 'vimeoEmbedUrl']);
         $engine->registerFunction('withChildren', [$this, 'withChildren']);
+        $engine->registerFunction('withSiblings', [$this, 'withSiblings']);
         $engine->registerFunction('youTubeEmbedUrl', [$this, 'youTubeEmbedUrl']);
     }
 
     /**
      * Strings
      */
+
+    /**
+     * Generates a string of attributes from a key/value array. Automatically prefixes with space
+     * @param  array  $attributes Key: attribute name, Value: attribute value
+     * @return string
+     */
+    public function attributeString(array $attributes = []): string
+    {
+        array_walk($attributes, fn (&$value, $attribute) => $value = trim("{$attribute}=\"{$value}\""));
+
+        $attributes = array_values($attributes);
+        $attributes = array_filter($attributes);
+        $attributes = implode(' ', $attributes);
+
+        return !!$attributes ? " {$attributes}" : '';
+    }
+
+    /**
+     * Shorthand method for attributeString()
+     *
+     * @see FunctionsExtension::attributeString()
+     */
+    public function attrString(array $attributes = []): string
+    {
+        return $this->attributeString($attributes);
+    }
 
     /**
      * Truncates a string or array of strings, safe for values that are not strings/arrays
@@ -651,6 +680,26 @@ class FunctionsExtension implements ExtensionInterface
         };
 
         return $parentPage->children($childSelector ?? '')->prepend($parentPage);
+    }
+
+    /**
+     * Given a page or page selector, gets siblings, prepends first page, and returns
+     * a new PageArray. Optional sibling page selector may be provided to select/filter
+     *
+     * @param  Page|string $startPageOrSelector Page to return with sibling pages
+     * @param  string|null $siblingSelector  Optional sibling page selector
+     * @return PageArray
+     */
+    public function withSiblings(
+        Page|int|string $startPageOrSelector,
+        ?string $siblingSelector = null
+    ): PageArray {
+        $startPage = match (true) {
+            is_a($startPageOrSelector, Page::class, true) => $startPageOrSelector,
+            default => wire('pages')->get($startPageOrSelector),
+        };
+
+        return $startPage->children($siblingSelector ?? '')->prepend($startPage);
     }
 
     /**
