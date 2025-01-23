@@ -119,15 +119,28 @@ class FunctionsExtension implements ExtensionInterface
 
     /**
      * Generates a string of attributes from a key/value array. Automatically prefixes with space
+     * Null values are removed
      * @param  array  $attributes Key: attribute name, Value: attribute value
      * @return string
      */
     public function attributeString(array $attributes = []): string
     {
-        array_walk($attributes, fn (&$value, $attribute) => $value = trim("{$attribute}=\"{$value}\""));
+        $attributes = array_filter($attributes, fn ($value) => !is_null($value));
+
+        array_walk($attributes, function(&$value, $attribute) {
+            bd('fired');
+            is_bool($value) && $value = filter_var($value, FILTER_VALIDATE_BOOL) ? 'true' : 'false';
+
+            if (is_int($attribute)) {
+                $value = $value;
+
+                return;
+            }
+
+            $value = trim("{$attribute}=\"{$value}\"");
+        });
 
         $attributes = array_values($attributes);
-        $attributes = array_filter($attributes);
         $attributes = implode(' ', $attributes);
 
         return !!$attributes ? " {$attributes}" : '';
