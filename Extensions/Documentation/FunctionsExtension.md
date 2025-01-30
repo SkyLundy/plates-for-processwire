@@ -36,6 +36,40 @@ Appends a one or more values to a string, array, integer, or WireArray
 <?php endforeach ?>
 ```
 
+## attrs
+
+Alias for [`attrStr`]($attrstr)
+
+## attrStr
+
+Creates an attribute string from an array. If a value is null, the attribute will not be rendered. Automatically prefixes the attribute string with a space to prevent gaps in markup if no attributes are rendered.
+
+**Batchable**
+
+```php
+<!-- Output is prefixed with a space if an attribute string is rendered -->
+<button class="bg-emerald-400 text-white"<?=$this->attrStr(['@click' => $click ?? null])?>>
+  Click Me
+</button>
+
+<!-- Keys without values may be used and will always be output -->
+<button<?=$this->attrStr(['data-example', '@click' => $click ?? null])?>>
+  Click Me
+</button>
+
+<!-- Booleans are always output as strings. Use a value of null to prevent output -->
+<button<?=$this->attrStr(['data-should-do-something' => !!$doSomething])?>>
+  Click Me
+</button>
+
+
+
+```
+
+## attributeString
+
+Legacy, use [`attrStr`]($attrstr) or [`attrs`]($attrs)
+
 ## batchEach
 
 Extends Plates' `batch()` method to each item in an array
@@ -849,7 +883,7 @@ Gets all children for and prepends the given Page object or Page found by select
 
 ```php
 <ul>
-  <?php foreach ($this->appendChildren('/') as $topLevelPage): ?>
+  <?php foreach ($this->withChildren('/') as $topLevelPage): ?>
     <li>
       <a href="<?=$topLevelPage->url?>"><?=$topLevelPage->title?></a>
     </li>
@@ -858,7 +892,7 @@ Gets all children for and prepends the given Page object or Page found by select
 
 <!-- Optional second child page selector -->
 <ul>
-  <?php foreach ($this->appendChildren('template=all_events', 'template=event,featured_event=1') as $eventPage): ?>
+  <?php foreach ($this->withChildren('template=all_events', 'template=event,featured_event=1') as $eventPage): ?>
     <li>
       <a href="<?=$eventPage->url?>"><?=$eventPage->title?></a>
     </li>
@@ -867,9 +901,32 @@ Gets all children for and prepends the given Page object or Page found by select
 
 <!-- Accepts a page object as the first argument -->
 <ul>
-  <?php foreach ($this->appendChildren($page) as $subnavPage): ?>
+  <?php foreach ($this->withChildren($page) as $subnavPage): ?>
     <li>
       <a href="<?=$subnavPage->url?>"><?=$subnavPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+```
+
+## withSiblings
+
+Gets all siblings for and prepends the given Page object or Page found by selector.
+
+```php
+<ul>
+  <?php foreach ($this->withSiblings('/product/categories/toys') as $categoryPage): ?>
+    <li>
+      <a href="<?=$categoryPage->url?>"><?=$categoryPage->title?></a>
+    </li>
+  <?php endforeach ?>
+</ul>
+
+<!-- Accepts a page object as the first argument -->
+<ul>
+  <?php foreach ($this->withChildren($page) as $siblingPage): ?>
+    <li>
+      <a href="<?=$siblingPage->url?>"><?=$siblingPage->title?></a>
     </li>
   <?php endforeach ?>
 </ul>

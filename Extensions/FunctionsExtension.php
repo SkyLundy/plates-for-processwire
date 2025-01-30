@@ -61,8 +61,9 @@ class FunctionsExtension implements ExtensionInterface
         $this->wireTextTools = new WireTextTools();
 
         $engine->registerFunction('append', [$this, 'append']);
+        $engine->registerFunction('attrStr', [$this, 'attrStr']);
         $engine->registerFunction('attributeString', [$this, 'attributeString']);
-        $engine->registerFunction('attrString', [$this, 'attrString']);
+        $engine->registerFunction('attrs', [$this, 'attrs']);
         $engine->registerFunction('batchArray', [$this, 'batchArray']);
         $engine->registerFunction('batchEach', [$this, 'batchEach']);
         $engine->registerFunction('bit', [$this, 'bit']);
@@ -123,12 +124,11 @@ class FunctionsExtension implements ExtensionInterface
      * @param  array  $attributes Key: attribute name, Value: attribute value
      * @return string
      */
-    public function attributeString(array $attributes = []): string
+    public function attrStr(array $attributes = []): string
     {
         $attributes = array_filter($attributes, fn ($value) => !is_null($value));
 
         array_walk($attributes, function(&$value, $attribute) {
-            bd('fired');
             is_bool($value) && $value = filter_var($value, FILTER_VALIDATE_BOOL) ? 'true' : 'false';
 
             if (is_int($attribute)) {
@@ -141,19 +141,36 @@ class FunctionsExtension implements ExtensionInterface
         });
 
         $attributes = array_values($attributes);
+
+        if (!$attributes) {
+            return '';
+        }
+
         $attributes = implode(' ', $attributes);
 
-        return !!$attributes ? " {$attributes}" : '';
+        return " {$attributes}";
     }
 
     /**
-     * Shorthand method for attributeString()
+     * LEGACY - Use attrs() or attrStr()
      *
-     * @see FunctionsExtension::attributeString()
+     * Shorthand method for attrStr()
+     *
+     * @see FunctionsExtension::attrStr()
      */
-    public function attrString(array $attributes = []): string
+    public function attributeString(array $attributes = []): string
     {
-        return $this->attributeString($attributes);
+        return $this->attrStr($attributes);
+    }
+
+    /**
+     * Shorthand method for attrStr()
+     *
+     * @see FunctionsExtension::attrStr()
+     */
+    public function attrs(array $attributes = []): string
+    {
+        return $this->attrStr($attributes);
     }
 
     /**

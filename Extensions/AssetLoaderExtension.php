@@ -45,23 +45,42 @@ class AssetLoaderExtension implements ExtensionInterface
         $engine->registerFunction('getAssetPath', [$this, 'getAssetPath']);
 
         $engine->registerFunction('linkAsset', [$this, 'linkAsset']);
+        $engine->registerFunction('linkAssetIf', [$this, 'linkAssetIf']);
+
         $engine->registerFunction('linkAssets', [$this, 'linkAssets']);
+        $engine->registerFunction('linkAssetsIf', [$this, 'linkAssetsIf']);
 
         $engine->registerFunction('inlineAsset', [$this, 'inlineAsset']);
+        $engine->registerFunction('inlineAssetIf', [$this, 'inlineAssetIf']);
+
         $engine->registerFunction('inlineAssets', [$this, 'inlineAssets']);
+        $engine->registerFunction('inlineAssetsIf', [$this, 'inlineAssetsIf']);
 
         $engine->registerFunction('linkCss', [$this, 'linkCss']);
-        $engine->registerFunction('inlineCss', [$this, 'inlineCss']);
+        $engine->registerFunction('linkCssIf', [$this, 'linkCssIf']);
+
+        $engine->registerFunction('inlineCssIf', [$this, 'inlineCssIf']);
 
         $engine->registerFunction('linkJs', [$this, 'linkJs']);
+        $engine->registerFunction('linkJsIf', [$this, 'linkJsIf']);
+
         $engine->registerFunction('inlineJs', [$this, 'inlineJs']);
+        $engine->registerFunction('inlineJsIf', [$this, 'inlineJsIf']);
 
         $engine->registerFunction('preloadAsset', [$this, 'preloadAsset']);
+        $engine->registerFunction('preloadAssetIf', [$this, 'preloadAssetIf']);
+
         $engine->registerFunction('preloadAssets', [$this, 'preloadAssets']);
+        $engine->registerFunction('preloadAssetsIf', [$this, 'preloadAssetsIf']);
 
         $engine->registerFunction('preloadCss', [$this, 'preloadCss']);
+        $engine->registerFunction('preloadCssIf', [$this, 'preloadCssIf']);
+
         $engine->registerFunction('preloadJs', [$this, 'preloadJs']);
+        $engine->registerFunction('preloadJsIf', [$this, 'preloadJsIf']);
+
         $engine->registerFunction('preloadFont', [$this, 'preloadFont']);
+        $engine->registerFunction('preloadFontIf', [$this, 'preloadFontIf']);
     }
 
     /**
@@ -103,6 +122,21 @@ class AssetLoaderExtension implements ExtensionInterface
     }
 
     /**
+     * Links an asset if the first argument is truthy
+     *
+     * @see AssetLoaderExtension:linkAsset()
+     *
+     * @return string|null
+     */
+    public function linkAssetIf(
+        mixed $conditional,
+        string $folderFile,
+        array $attributes = []
+    ): ?string {
+        return !!$conditional ? $this->linkAsset($folderFile, $attributes) : null;
+    }
+
+    /**
      * Convenience method to link multiple assets of any type.
      * Does not accept attributes for tags
      *
@@ -114,6 +148,18 @@ class AssetLoaderExtension implements ExtensionInterface
         $markups = array_map(fn ($folderFile) => $this->linkAsset($folderFile), $folderFiles);
 
         return implode("\n", $markups);
+    }
+
+    /**
+     * Links an array of assets if the conditional argument is truthy
+     *
+     * @see AssetLoaderExtension::linkAssets()
+     *
+     * @return string|null
+     */
+    public function linkAssetsIf(mixed $conditional, array $folderFiles): ?string
+    {
+        return !!$conditional ? $this->linkAssets($folderFiles) : null;
     }
 
     /**
@@ -135,6 +181,51 @@ class AssetLoaderExtension implements ExtensionInterface
     }
 
     /**
+     * Links an array of assets if the conditional argument is truthy
+     *
+     * @see AssetLoaderExtension::inlineAsset()
+     *
+     * @param  mixed  $conditional Value evaluated for truthy/falsey value
+     * @param  string $folderFile  Configured folder/filepath present in module config
+     * @param  array  $attributes  Attributes added to the link/script tag
+     * @return string|null
+     */
+    public function inlineAssetIf(
+        mixed $conditional,
+        string $folderFile,
+        array $attributes = [],
+    ): ?string {
+        return !!$conditional ? $this->inlineAsset($folderFile, $attributes) : null;
+    }
+
+    /**
+     * Convenience method to inline multiple assets of any type.
+     * Does not accept attributes for tags
+     *
+     * @param  array        $folderFiles Array of folderfile strings
+     * @return string|null
+     */
+    public function inlineAssets(array $folderFiles): ?string
+    {
+        $markups = array_map(fn ($folderFile) => $this->inlineAsset($folderFile), $folderFiles);
+
+        return implode("\n", $markups);
+    }
+
+    /**
+     * Convenience method to inline multiple assets of any type.
+     * Does not accept attributes for tags
+     *
+     * @param  array  $folderFiles Array of folderfile strings
+     * @return string
+     */
+    public function inlineAssetsIf(mixed $conditional, array $folderFiles): ?string
+    {
+        return !!$conditional ? $this->inlineAssets($folderFiles) : null;
+    }
+
+
+    /**
      * Creates a <link> tag for a CSS file
      *
      * @param  string  $filepath    Filepath relative to root
@@ -153,6 +244,20 @@ class AssetLoaderExtension implements ExtensionInterface
         ]);
 
         return "<link {$attributes} />";
+    }
+
+    /**
+     * Convenience method to link a CSS file conditionally.
+     *
+     * @param  string  $filepath Filepath relative to roots
+     * @return string|null
+     */
+    public function linkCssIf(
+        mixed $conditional,
+        string $filepath,
+        array $attributes = [],
+    ): ?string {
+        return !!$conditional ? $this->linkCss($filepath, $attributes) : null;
     }
 
     /**
@@ -179,6 +284,20 @@ class AssetLoaderExtension implements ExtensionInterface
     }
 
     /**
+     * Convenience method to inline a CSS file conditionally.
+     *
+     * @param  string  $filepath Filepath relative to roots
+     * @return string|null
+     */
+    public function inlineCssIf(
+        mixed $conditional,
+        string $filepath,
+        array $attributes = [],
+    ): ?string {
+        return !!$conditional ? $this->inlineCss($filepath, $attributes) : null;
+    }
+
+    /**
      * Create a <script> tag linking a JS file
      *
      * @param  string       $file       File with relative path to root
@@ -196,6 +315,20 @@ class AssetLoaderExtension implements ExtensionInterface
         ]);
 
         return "<script {$attributes}></script>";
+    }
+
+    /**
+     * Convenience method to link a JS file conditionally.
+     *
+     * @param  string  $filepath Filepath relative to roots
+     * @return string|null
+     */
+    public function linkJsIf(
+        mixed $conditional,
+        string $filepath,
+        array $attributes = [],
+    ): ?string {
+        return !!$conditional ? $this->linkJs($filepath, $attributes) : null;
     }
 
     /**
@@ -222,6 +355,27 @@ class AssetLoaderExtension implements ExtensionInterface
         return $markup;
     }
 
+    /**
+     * Convenience method to inline a JS file conditionally.
+     *
+     * @param  string  $filepath Filepath relative to roots
+     * @return string|null
+     */
+    public function inlineJsIf(
+        mixed $conditional,
+        string $filepath,
+        array $attributes = [],
+    ): ?string {
+        return !!$conditional ? $this->inlineJs($filepath, $attributes) : null;
+    }
+
+
+    /**
+     * Preload a CSS, JS, or font files
+     *
+     * @param  string $folderFile  Configured folder or filepath
+     * @return string
+     */
     public function preloadAsset(string $folderFile): string
     {
         $parsedFolderFile = $this->parseFolderFile($folderFile);
@@ -237,7 +391,19 @@ class AssetLoaderExtension implements ExtensionInterface
     }
 
     /**
-     * Preload multiple assets in one functio call
+     * Preload a CSS, JS, or font file
+     *
+     * @param  mixed  $conditional Value evaluated for truthey/falsey
+     * @param  string $folderFile  Configured folder or filepath
+     * @return string|null
+     */
+    public function preloadAssetIf(mixed $conditional, string $folderFile): ?string
+    {
+        return !!$conditional ?  $this->preloadAsset($folderFile) : null;
+    }
+
+    /**
+     * Preload multiple assets in one function call
      * @param  array  $folderFiles Files with configured folder prefix
      * @return string
      */
@@ -246,6 +412,18 @@ class AssetLoaderExtension implements ExtensionInterface
         $markup = array_map(fn ($folderFile) => $this->preloadAsset($folderFile), $folderFiles);
 
         return implode("\n", $markup);
+    }
+
+    /**
+     * Preload multiple assets in one function call conditionally based on truthy/falsey value of
+     * first passed argument
+     * @param  mixed  $conditional Value evaluated for truthy/falsey value
+     * @param  array  $folderFiles Files with configured folder prefix
+     * @return string|null
+     */
+    public function preloadAssetsIf(mixed $conditional, array $folderFiles): ?string
+    {
+        return !!$conditional ? $this->preloadAssets($folderFiles) : null;
     }
 
     /**
@@ -265,6 +443,17 @@ class AssetLoaderExtension implements ExtensionInterface
     }
 
     /**
+     * Preload a CSS file conditionally
+     * @param  mixed  $conditional Value evaluated for truthy/falsey value
+     * @param  string $filepath    Path to file
+     * @return string|null
+     */
+    public function preloadCssIf(mixed $conditional, string $filepath): ?string
+    {
+        return !!$conditional ? $this->preloadCss($filepath) : null;
+    }
+
+    /**
      * Preload a specified JS file
      * @param  string $filepath Filepath of asset to preload
      * @return string
@@ -278,6 +467,17 @@ class AssetLoaderExtension implements ExtensionInterface
         ]);
 
         return "<link {$attributes} />";
+    }
+
+    /**
+     * Preload a JS file conditionally
+     * @param  mixed  $conditional Value evaluated for truthy/falsey value
+     * @param  string $filepath    Path to file
+     * @return string|null
+     */
+    public function preloadJsIf(mixed $conditional, string $filepath): ?string
+    {
+        return !!$conditional ? $this->preloadJs($filepath) : null;
     }
 
     /**
@@ -295,6 +495,17 @@ class AssetLoaderExtension implements ExtensionInterface
         ]);
 
         return "<link {$attributes} />";
+    }
+
+    /**
+     * Preload a font file conditionally
+     * @param  mixed  $conditional Value evaluated for truthy/falsey value
+     * @param  string $filepath    Path to file
+     * @return string|null
+     */
+    public function preloadFontIf(mixed $conditional, string $filepath): ?string
+    {
+        return !!$conditional ? $this->preloadFont($filepath) : null;
     }
 
     /**
@@ -361,22 +572,29 @@ class AssetLoaderExtension implements ExtensionInterface
      */
     private function createAttributeString(array $attributes): string
     {
-        $attributeStrings = [];
+        $attributes = array_filter($attributes, fn ($value) => !is_null($value));
 
-        foreach ($attributes as $key => $value) {
-            if (is_int($key)) {
-                $attributeStrings[] = trim($value);
+        array_walk($attributes, function(&$value, $attribute) {
+            is_bool($value) && $value = filter_var($value, FILTER_VALIDATE_BOOL) ? 'true' : 'false';
 
-                continue;
+            if (is_int($attribute)) {
+                $value = $value;
+
+                return;
             }
 
-            $key = trim($key);
-            $value = trim($value);
+            $value = trim("{$attribute}=\"{$value}\"");
+        });
 
-            $attributeStrings[] = "{$key}=\"{$value}\"";
+        $attributes = array_values($attributes);
+
+        if (!$attributes) {
+            return '';
         }
 
-        return implode(' ', $attributeStrings);
+        $attributes = implode(' ', $attributes);
+
+        return " {$attributes}";
     }
 
     /**

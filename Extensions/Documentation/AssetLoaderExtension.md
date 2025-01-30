@@ -124,22 +124,57 @@ You can also inline the contents of CSS or JS assets
 
 You can also preload assets via `<link>` tags. Preloading assets works with CSS, JS, and font files. CSS and JS will have the correct cache busting parameter appended to the URL
 
+**NOTE:** asset folder definitions are added via the module config page. This is separate from the folders feature of Plates. Defining folders in your code will not be registered with this extension. Defining the same folder on the module config page and with Plates will not cause any conflicts.
+
 ```php
-<!-- You may pass any type of file when using configured folders -->
+<!-- You may pass any type of file when using asset folders defined on the module config page -->
 <?=$this->preloadAsset('css::styles.css')?>
 <?=$this->preloadAsset('js::script.js')?>
-<?=$this->preloadAsset('fonts::your-font.woff')?>
+<?=$this->preloadAsset('fonts::your-font.woff2')?>
 
-<!-- Withoud configured folders, call the respective methods -->
+<!-- Without asset folders configured in the module, call the respective methods -->
 <?=$this->preloadCss('/path/to/your/styles.css')?>
 <?=$this->preloadJs('/path/to/your/script.js')?>
-<?=$this->preloadFont('/path/to/your-font.woff')?>
+<?=$this->preloadFont('/path/to/your-font.woff2')?>
 
 <!-- Output respectively -->
 <link rel="preload" href="/path/to/your/styles.css?v=1734630086" as="style">
 <link rel="preload" href="/path/to/your/script.js?v=1734630080" as="script">
-<link rel="preload" href="/path/to/your-font.woff" as="font" crossorigin>
+<link rel="preload" href="/path/to/your-font.woff2" as="font" crossorigin>
 ```
+
+#### Conditionals
+
+Any link, inline, or preload function can be conditional when the function call is appended with `If`. The first argument can
+
+```php
+<?=$this->linkAssetIf($conditional, 'css::styles.css', ['data-some-attribute'])?>
+<?=$this->inlineAssetIf($conditional, 'js::script.js')?>
+<?=$this->preloadAssetIf($conditional, 'fonts::your-font.woff2')?>
+
+<!-- Also works on functions for multiple assets. -->
+<?=$this->linkAssetsIf($conditional, [
+  'css::styles.css',
+  'js::script.js',
+])?>
+
+<?=$this->inlineAssetsIf($conditional, [
+  'css::styles.css',
+  'js::script.js',
+])?>
+
+<?=$this->preloadAssetsIf($conditional, [
+  'css::styles.css',
+  'js::script.js',
+  'fonts::your-font.woff2'
+])?>
+
+<?=$this->preloadCssIf($conditional, '/path/to/your/styles.css')?>
+<?=$this->preloadJsIf($conditional, '/path/to/your/script.js')?>
+<?=$this->preloadFontIf($conditional, '/path/to/your-font.woff2')?>
+
+```
+
 
 #### Getting Asset Paths For Configured Folders
 
