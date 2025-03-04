@@ -8,7 +8,7 @@ $basePage = $pages->get($basePage ?? '/');
 ?>
 <nav aria-label="<?=$ariaLabel?>">
   <ul>
-    <?php foreach ($basePage->children->prepend($basePage) as $navPage): ?>
+    <?php foreach ($basePage->and($basePage->children) as $navPage): ?>
       <?php $this->insert('components::navigation_item', ['navPage' => $navPage]) ?>
     <?php endforeach ?>
   </ul>

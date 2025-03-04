@@ -54,7 +54,6 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
             require_once "{$this->wire->config->paths->$this}vendor/autoload.php";
         }
 
-
         $this->wire->set('plates', $this);
 
         $this->wire('classLoader')->addNamespace('PlatesForProcessWire\Extensions', __DIR__ . '/Extensions');
@@ -81,7 +80,7 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
     public function ___initialize(?string $templatesDir = null): Engine
     {
         $templatesDir =  rtrim($templatesDir ?? $this->wire('config')->paths->templates, '/');
-// dd($templatesDir);
+
         $fileExtension = ltrim($this->plates_file_extension ?: self::DEFAULT_FILE_EXTENSION, '.');
 
         return new Engine($templatesDir, $fileExtension);
@@ -153,7 +152,7 @@ class PlatesForProcessWire extends WireData implements Module, ConfigurableModul
      */
     private function loadOptionalPlatesExtensions(Engine $engine): void
     {
-        if ($this->add_plates_uri_extension) {
+        if ($this->add_plates_asset_extension) {
             $path = ltrim($this->plates_asset_extension_path, '/');
 
             $engine->loadExtension(

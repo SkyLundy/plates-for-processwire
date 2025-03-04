@@ -224,7 +224,6 @@ class AssetLoaderExtension implements ExtensionInterface
         return !!$conditional ? $this->inlineAssets($folderFiles) : null;
     }
 
-
     /**
      * Creates a <link> tag for a CSS file
      *
@@ -374,11 +373,12 @@ class AssetLoaderExtension implements ExtensionInterface
      * Preload a CSS, JS, or font files
      *
      * @param  string $folderFile  Configured folder or filepath
+     * @param  bool   $absolute    Create preload elements with absolute URL path
      * @return string
      */
-    public function preloadAsset(string $folderFile): string
+    public function preloadAsset(string $folderFile, bool $absolute = false): string
     {
-        $parsedFolderFile = $this->parseFolderFile($folderFile);
+        $parsedFolderFile = $this->parseFolderFile($folderFile, $absolute);
 
         // No change to output but will trigger exception if extension debug is enabled
         $this->folderConfigured($parsedFolderFile->folder);
@@ -395,21 +395,29 @@ class AssetLoaderExtension implements ExtensionInterface
      *
      * @param  mixed  $conditional Value evaluated for truthey/falsey
      * @param  string $folderFile  Configured folder or filepath
+     * @param  bool   $absolute    Create preload elements with absolute URL path
      * @return string|null
      */
-    public function preloadAssetIf(mixed $conditional, string $folderFile): ?string
-    {
-        return !!$conditional ?  $this->preloadAsset($folderFile) : null;
+    public function preloadAssetIf(
+        mixed $conditional,
+        string $folderFile,
+        bool $absolute = false
+    ): ?string {
+        return !!$conditional ?  $this->preloadAsset($folderFile, $absolute) : null;
     }
 
     /**
      * Preload multiple assets in one function call
-     * @param  array  $folderFiles Files with configured folder prefix
+     * @param  array  $folderFiles  Files with configured folder prefix
+     * @param  bool   $absolute    Create preload elements with absolute URL path
      * @return string
      */
-    public function preloadAssets(array $folderFiles): string
+    public function preloadAssets(array $folderFiles, bool $absolute = false): string
     {
-        $markup = array_map(fn ($folderFile) => $this->preloadAsset($folderFile), $folderFiles);
+        $markup = array_map(
+            fn ($folderFile) => $this->preloadAsset($folderFile, $absolute),
+            $folderFiles
+        );
 
         return implode("\n", $markup);
     }
@@ -419,16 +427,21 @@ class AssetLoaderExtension implements ExtensionInterface
      * first passed argument
      * @param  mixed  $conditional Value evaluated for truthy/falsey value
      * @param  array  $folderFiles Files with configured folder prefix
+     * @param  bool   $absolute    Create preload elements with absolute URL path
      * @return string|null
      */
-    public function preloadAssetsIf(mixed $conditional, array $folderFiles): ?string
-    {
-        return !!$conditional ? $this->preloadAssets($folderFiles) : null;
+    public function preloadAssetsIf(
+        mixed $conditional,
+        array $folderFiles,
+        bool $absolute = false,
+    ): ?string {
+        return !!$conditional ? $this->preloadAssets($folderFiles, $absolute) : null;
     }
 
     /**
      * Preload a specified CSS file
      * @param  string $filepath Filepath of asset to preload
+     * @param  bool   $absolute    Create preload elements with absolute URL path
      * @return string
      */
     public function preloadCss(string $filepath): string
@@ -517,15 +530,15 @@ class AssetLoaderExtension implements ExtensionInterface
     {
         $pathinfo = pathinfo($filepath);
 
-        $absolutePath = $this->getAbsolutePath($filepath);
+        $absolute = $this->getAbsoluteFilesystemPath($filepath);
 
         $basename = $pathinfo['basename'] ?? false;
 
-        if (!$absolutePath || !$basename) {
+        if (!$absolute || !$basename) {
             return $filepath;
         }
 
-        $updatedAt = filemtime($absolutePath);
+        $updatedAt = filemtime($absolute);
 
         $bustedAsset = "{$basename}?v={$updatedAt}";
 
@@ -610,7 +623,7 @@ class AssetLoaderExtension implements ExtensionInterface
         }
 
         return wire('files')->fileGetContents(
-            $this->getAbsolutePath($filepath)
+            $this->getAbsoluteFilesystemPath($filepath)
         );
     }
 
@@ -620,7 +633,7 @@ class AssetLoaderExtension implements ExtensionInterface
      * @param  string $folderFile argument passed to asset method
      * @return stdClass
      */
-    private function parseFolderFile(string $folderFile): stdClass
+    private function parseFolderFile(string $folderFile, bool $absolute = false): stdClass
     {
         $folderFileComponents = explode('::', $folderFile);
 
@@ -633,6 +646,15 @@ class AssetLoaderExtension implements ExtensionInterface
         [$folder, $file] = $folderFileComponents;
 
         $filepath = "{$this->folderDefinitions[$folder]}/{$file}";
+
+        if ($absolute === true) {
+            if (str_starts_with($filepath, '/')) {
+                $filepath = substr($filepath, 1);
+            }
+
+            $filepath = wire('pages')->get('/')->httpUrl . $filepath;
+        }
+
 
         $pathinfo = pathinfo($filepath);
 
@@ -662,9 +684,9 @@ class AssetLoaderExtension implements ExtensionInterface
      */
     private function fileExists(string $filepath): bool
     {
-        $absolutePath = $this->getAbsolutePath($filepath);
+        $absolute = $this->getAbsoluteFilesystemPath($filepath);
 
-        $fileExists = wire('files')->exists($absolutePath);
+        $fileExists = wire('files')->exists($absolute);
 
         if (!$fileExists && $this->debugMode) {
             throw new LogicException("The file '{$filepath}' does not exist");
@@ -693,17 +715,16 @@ class AssetLoaderExtension implements ExtensionInterface
         return $folderConfigured;
     }
 
-
     /**
      * Returns the absolute filesystem path for a given file
      *
      * Format:
-     * /absolute/filesystem/path/to/file.extension
+     * /absolute/root/file/path/to/file.extension
      *
      * @param  string $file Path to file
      * @return string
      */
-    private function getAbsolutePath(string $filepath): string
+    private function getAbsoluteFilesystemPath(string $filepath): string
     {
         $pathinfo = pathinfo($filepath);
 
@@ -712,8 +733,8 @@ class AssetLoaderExtension implements ExtensionInterface
         $dirname = ltrim($pathinfo['dirname'], '/');
         $dirname = rtrim($dirname, '/');
 
-        $absolutePath = "{$root}{$dirname}/{$pathinfo['basename']}";
+        $absolute = "{$root}{$dirname}/{$pathinfo['basename']}";
 
-        return $absolutePath;
+        return $absolute;
     }
 }
